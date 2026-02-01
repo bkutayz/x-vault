@@ -4,6 +4,7 @@ let selectedUserData = null;
 let allSelectMode = false;
 let notesDebounce = null;
 let currentView = 'home';
+let currentSort = 'date';
 
 let toastTimer = null;
 
@@ -150,6 +151,7 @@ async function showUserContext(handle) {
 
   document.getElementById('user-context').classList.remove('hidden');
   document.getElementById('llm-bar').classList.remove('hidden');
+  document.getElementById('sort-bar').classList.remove('hidden');
 
   document.getElementById('ctx-name').textContent = user.displayName || handle;
   document.getElementById('ctx-handle').textContent = `@${handle}`;
@@ -177,6 +179,7 @@ async function showUserContext(handle) {
 function hideUserContext() {
   document.getElementById('user-context').classList.add('hidden');
   document.getElementById('llm-bar').classList.add('hidden');
+  document.getElementById('sort-bar').classList.add('hidden');
   selectedUserData = null;
 }
 
@@ -330,8 +333,47 @@ function appendTweet(tweet) {
   container.prepend(createTweetCard(tweet));
 }
 
+// ==================== Sort ====================
+
+function sortTweets(tweets, sortBy) {
+  switch (sortBy) {
+    case 'likes':
+      return [...tweets].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
+    case 'views':
+      return [...tweets].sort((a, b) => (b.viewCount || b.impressionCount || 0) - (a.viewCount || a.impressionCount || 0));
+    case 'date':
+    default:
+      return [...tweets].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }
+}
+
+function applySortAndRender() {
+  const sorted = sortTweets(currentTweets, currentSort);
+  const container = document.getElementById('tweet-list');
+  container.innerHTML = '';
+  if (sorted.length === 0) {
+    container.innerHTML = '<div id="empty-state">No tweets found.</div>';
+    return;
+  }
+  for (const tweet of sorted) {
+    container.appendChild(createTweetCard(tweet));
+  }
+}
+
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentSort = btn.dataset.sort;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b === btn));
+    applySortAndRender();
+  });
+});
+
 async function selectUser(handle) {
   selectedUser = handle;
+
+  // Reset sort to date
+  currentSort = 'date';
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === 'date'));
 
   document.querySelectorAll('.user-item').forEach((el) => {
     el.classList.toggle('active', el.dataset.handle === handle);
@@ -416,17 +458,24 @@ document.getElementById('copy-all').addEventListener('click', async () => {
 
 // ==================== LLM Prompt Templates ====================
 
+function formatTweetsForLLM(tweets) {
+  return tweets
+    .map(t => t.fullText)
+    .filter(Boolean)
+    .join('\n---\n');
+}
+
 const LLM_PROMPTS = {
   summarize: (handle, name) =>
-    `Below are tweets from @${handle} (${name}). Based on these tweets, provide a comprehensive summary of this person's thinking, worldview, and main ideas. What are the key themes they discuss? What positions do they take?\n\n`,
+    `Below are tweets from @${handle} (${name}). Provide a comprehensive summary of this person's thinking, worldview, and main ideas. What are the key themes? What positions do they take?\n\n`,
   beliefs: (handle, name) =>
-    `Below are tweets from @${handle} (${name}). Analyze these tweets and extract this person's core beliefs, values, and convictions. What do they strongly believe in? What principles guide their thinking?\n\n`,
+    `Below are tweets from @${handle} (${name}). Extract this person's core beliefs, values, and convictions. What do they strongly believe in? What principles guide their thinking?\n\n`,
   topics: (handle, name) =>
-    `Below are tweets from @${handle} (${name}). Identify and rank the top topics/subjects this person tweets about. For each topic, give a brief summary of their stance or key points.\n\n`,
+    `Below are tweets from @${handle} (${name}). Identify and rank the top topics this person tweets about. For each topic, summarize their stance.\n\n`,
   style: (handle, name) =>
-    `Below are tweets from @${handle} (${name}). Analyze their writing and communication style. How do they express ideas? What rhetorical techniques do they use? What is their tone? How could you characterize their voice?\n\n`,
+    `Below are tweets from @${handle} (${name}). Analyze their writing style, tone, and rhetorical techniques. How would you characterize their voice?\n\n`,
   predict: (handle, name) =>
-    `Below are tweets from @${handle} (${name}). Based on their established thinking patterns, beliefs, and reasoning style, predict how this person would likely respond to a current event or topic of my choosing. First, summarize their thinking framework, then I'll ask you to apply it.\n\n`
+    `Below are tweets from @${handle} (${name}). Based on their thinking patterns and beliefs, predict how they would respond to a topic of my choosing. First, summarize their thinking framework.\n\n`
 };
 
 document.querySelectorAll('.llm-prompt').forEach((btn) => {
@@ -447,7 +496,7 @@ document.querySelectorAll('.llm-prompt').forEach((btn) => {
     const handle = selectedUser || currentTweets[0].handle;
     const name = selectedUserData?.displayName || handle;
     const prompt = LLM_PROMPTS[promptType](handle, name);
-    const tweetsText = formatTweets(currentTweets, 'markdown');
+    const tweetsText = formatTweetsForLLM(currentTweets);
     const fullPrompt = prompt + tweetsText;
 
     await navigator.clipboard.writeText(fullPrompt);
@@ -478,7 +527,7 @@ document.getElementById('custom-prompt-copy').addEventListener('click', async ()
   const handle = selectedUser || currentTweets[0].handle;
   const name = selectedUserData?.displayName || handle;
   const intro = `Below are tweets from @${handle} (${name}). ${customPrompt}\n\n`;
-  const tweetsText = formatTweets(currentTweets, 'markdown');
+  const tweetsText = formatTweetsForLLM(currentTweets);
   const fullPrompt = intro + tweetsText;
 
   await navigator.clipboard.writeText(fullPrompt);
@@ -785,7 +834,25 @@ function renderRecentTweets(tweets) {
   }
 }
 
-function createGridCard(tweet) {
+// Shared metrics HTML builder (SVG icons)
+function buildMetricsHtml(tweet) {
+  const metrics = [];
+  if (tweet.replyCount) metrics.push(`<span class="grid-metric" title="Replies"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.25-.893 4.306-2.394 5.82l-4.36 4.36a.75.75 0 01-1.06 0l-.72-.72a.75.75 0 010-1.06l4.36-4.36A5.63 5.63 0 0020.501 10.13 6.38 6.38 0 0014.122 3.75h-4.366a6.25 6.25 0 00-6.255 6.25c0 1.903.855 3.604 2.2 4.748l.09.07a.75.75 0 01-.48 1.34H3.59a.75.75 0 01-.54-.23A7.98 7.98 0 011.751 10z" fill="currentColor"/></svg> ${formatMetricCount(tweet.replyCount)}</span>`);
+  if (tweet.retweetCount) metrics.push(`<span class="grid-metric" title="Reposts"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2h3v2h-3c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM19.5 20.12l-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2h-3V4h3c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14z" fill="currentColor"/></svg> ${formatMetricCount(tweet.retweetCount)}</span>`);
+  if (tweet.likeCount) metrics.push(`<span class="grid-metric" title="Likes"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.56-1.13-1.666-1.84-2.908-1.91z" fill="currentColor"/></svg> ${formatMetricCount(tweet.likeCount)}</span>`);
+  if (tweet.bookmarkCount) metrics.push(`<span class="grid-metric" title="Bookmarks"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z" fill="currentColor"/></svg> ${formatMetricCount(tweet.bookmarkCount)}</span>`);
+  if (tweet.viewCount || tweet.impressionCount) metrics.push(`<span class="grid-metric" title="Views"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M8.75 21V3h2v18h-2zM18.75 21V8.5h2V21h-2zM13.75 21v-9h2v9h-2zM3.75 21v-4h2v4h-2z" fill="currentColor"/></svg> ${formatMetricCount(tweet.viewCount || tweet.impressionCount)}</span>`);
+  return metrics.length > 0 ? `<div class="grid-metrics">${metrics.join('')}</div>` : '';
+}
+
+// Shared avatar HTML builder
+function buildAvatarHtml(tweet) {
+  return tweet.avatarUrl
+    ? `<img class="grid-avatar" src="${escapeHtml(tweet.avatarUrl)}" alt="@${escapeHtml(tweet.handle)}">`
+    : `<div class="grid-avatar grid-avatar-placeholder">${escapeHtml(tweet.handle.charAt(0).toUpperCase())}</div>`;
+}
+
+function createGridCard(tweet, { selectable = false } = {}) {
   const card = document.createElement('div');
   card.className = 'grid-card';
   card.dataset.tweetId = tweet.tweetId;
@@ -795,100 +862,45 @@ function createGridCard(tweet) {
     retweetHtml = `<div class="retweet-badge">Reposted by @${escapeHtml(tweet.retweetedBy)}</div>`;
   }
 
-  // Build metrics row
-  const metrics = [];
-  if (tweet.replyCount) metrics.push(`<span class="grid-metric" title="Replies"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.25-.893 4.306-2.394 5.82l-4.36 4.36a.75.75 0 01-1.06 0l-.72-.72a.75.75 0 010-1.06l4.36-4.36A5.63 5.63 0 0020.501 10.13 6.38 6.38 0 0014.122 3.75h-4.366a6.25 6.25 0 00-6.255 6.25c0 1.903.855 3.604 2.2 4.748l.09.07a.75.75 0 01-.48 1.34H3.59a.75.75 0 01-.54-.23A7.98 7.98 0 011.751 10z" fill="currentColor"/></svg> ${formatMetricCount(tweet.replyCount)}</span>`);
-  if (tweet.retweetCount) metrics.push(`<span class="grid-metric" title="Reposts"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2h3v2h-3c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM19.5 20.12l-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2h-3V4h3c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14z" fill="currentColor"/></svg> ${formatMetricCount(tweet.retweetCount)}</span>`);
-  if (tweet.likeCount) metrics.push(`<span class="grid-metric" title="Likes"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.56-1.13-1.666-1.84-2.908-1.91z" fill="currentColor"/></svg> ${formatMetricCount(tweet.likeCount)}</span>`);
-  if (tweet.bookmarkCount) metrics.push(`<span class="grid-metric" title="Bookmarks"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z" fill="currentColor"/></svg> ${formatMetricCount(tweet.bookmarkCount)}</span>`);
-  if (tweet.viewCount || tweet.impressionCount) metrics.push(`<span class="grid-metric" title="Views"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M8.75 21V3h2v18h-2zM18.75 21V8.5h2V21h-2zM13.75 21v-9h2v9h-2zM3.75 21v-4h2v4h-2z" fill="currentColor"/></svg> ${formatMetricCount(tweet.viewCount || tweet.impressionCount)}</span>`);
-  const metricsHtml = metrics.length > 0 ? `<div class="grid-metrics">${metrics.join('')}</div>` : '';
-
-  // Avatar
-  const avatarHtml = tweet.avatarUrl
-    ? `<img class="grid-avatar" src="${escapeHtml(tweet.avatarUrl)}" alt="@${escapeHtml(tweet.handle)}">`
-    : `<div class="grid-avatar grid-avatar-placeholder">${escapeHtml(tweet.handle.charAt(0).toUpperCase())}</div>`;
+  const deleteBtn = selectable ? `<button class="grid-card-delete" title="Delete tweet">\u00d7</button>` : '';
+  const checkboxHtml = selectable ? `<input type="checkbox" class="grid-card-checkbox tweet-checkbox" value="${escapeHtml(tweet.tweetId)}">` : '';
 
   card.innerHTML = `
     ${retweetHtml}
     <div class="grid-card-header">
-      ${avatarHtml}
+      ${buildAvatarHtml(tweet)}
       <div class="grid-card-user">
         <span class="grid-card-name">${escapeHtml(tweet.displayName)}</span>
         <span class="grid-card-handle">@${escapeHtml(tweet.handle)} &middot; ${formatTimestamp(tweet.timestamp)}</span>
       </div>
       <a href="${escapeHtml(tweet.url)}" target="_blank" class="grid-card-link" title="Open on X">\u2197</a>
+      ${deleteBtn}
     </div>
-    <div class="grid-card-text">${escapeHtml(tweet.fullText)}</div>
-    ${metricsHtml}
-  `;
-
-  return card;
-}
-
-function createTweetCard(tweet, isReadOnly = false) {
-  const card = document.createElement('div');
-  card.className = 'tweet-card';
-  card.dataset.tweetId = tweet.tweetId;
-
-  let retweetHtml = '';
-  if (tweet.isRetweet && tweet.retweetedBy) {
-    retweetHtml = `<div class="retweet-badge">Reposted by @${escapeHtml(tweet.retweetedBy)}</div>`;
-  }
-
-  const checkboxHtml = isReadOnly ? '' : `
-    <label class="tweet-select">
-      <input type="checkbox" class="tweet-checkbox" value="${escapeHtml(tweet.tweetId)}">
-    </label>`;
-
-  const deleteBtn = isReadOnly ? '' : `<button class="tweet-delete-btn" title="Delete tweet">\u00d7</button>`;
-
-  // Build metrics bar if any engagement data exists
-  const metrics = [];
-  if (tweet.replyCount) metrics.push(`<span class="tweet-metric" title="Replies">\u{1F4AC} ${formatMetricCount(tweet.replyCount)}</span>`);
-  if (tweet.retweetCount) metrics.push(`<span class="tweet-metric" title="Reposts">\u{1F501} ${formatMetricCount(tweet.retweetCount)}</span>`);
-  if (tweet.likeCount) metrics.push(`<span class="tweet-metric" title="Likes">\u2764 ${formatMetricCount(tweet.likeCount)}</span>`);
-  if (tweet.viewCount || tweet.impressionCount) metrics.push(`<span class="tweet-metric" title="Views">\u{1F4CA} ${formatMetricCount(tweet.viewCount || tweet.impressionCount)}</span>`);
-  if (tweet.bookmarkCount) metrics.push(`<span class="tweet-metric" title="Bookmarks">\u{1F516} ${formatMetricCount(tweet.bookmarkCount)}</span>`);
-  const metricsHtml = metrics.length > 0 ? `<div class="tweet-metrics">${metrics.join('')}</div>` : '';
-
-  // Show captured time for home view
-  const capturedHtml = tweet.capturedAt ? `<span class="tweet-captured" title="Captured ${new Date(tweet.capturedAt).toLocaleString()}">captured ${formatTimestamp(tweet.capturedAt)}</span>` : '';
-
-  card.innerHTML = `
+    ${tweet.fullText ? `<div class="grid-card-text">${escapeHtml(tweet.fullText)}</div>` : '<div class="grid-card-text grid-card-text-empty">No text captured</div>'}
+    ${buildMetricsHtml(tweet)}
     ${checkboxHtml}
-    <div class="tweet-content">
-      ${retweetHtml}
-      <div class="tweet-header">
-        <strong>${escapeHtml(tweet.displayName)}</strong>
-        <span class="handle">@${escapeHtml(tweet.handle)}</span>
-        <span class="timestamp">${formatTimestamp(tweet.timestamp)}</span>
-        ${capturedHtml}
-        <a href="${escapeHtml(tweet.url)}" target="_blank" class="tweet-link" title="Open on X">\u2197</a>
-        ${deleteBtn}
-      </div>
-      <div class="tweet-text">${escapeHtml(tweet.fullText)}</div>
-      ${metricsHtml}
-    </div>
   `;
 
-  if (!isReadOnly) {
-    const checkbox = card.querySelector('.tweet-checkbox');
+  if (selectable) {
+    const checkbox = card.querySelector('.grid-card-checkbox');
     if (checkbox) {
       checkbox.addEventListener('change', () => {
         card.classList.toggle('selected', checkbox.checked);
       });
     }
 
-    const delBtn = card.querySelector('.tweet-delete-btn');
+    const delBtn = card.querySelector('.grid-card-delete');
     if (delBtn) {
-      delBtn.addEventListener('click', () => {
-        deleteTweetNow(tweet, card);
-      });
+      delBtn.addEventListener('click', () => deleteTweetNow(tweet, card));
     }
   }
 
   return card;
+}
+
+// Alias for backward compat
+function createTweetCard(tweet, isReadOnly = false) {
+  return createGridCard(tweet, { selectable: !isReadOnly });
 }
 
 // ==================== Users View ====================

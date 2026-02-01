@@ -60,6 +60,10 @@
       height: 50px;
       object-fit: cover;
       border-radius: 50%;
+      pointer-events: none;
+    }
+    .ts-floating-btn svg {
+      pointer-events: none;
     }
     .ts-floating-btn .ts-count-badge {
       position: absolute;
@@ -76,6 +80,7 @@
       text-align: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       border: 2px solid #fff;
+      pointer-events: none;
     }
     .ts-floating-btn .ts-default-icon {
       width: 28px;
@@ -120,6 +125,7 @@
       width: 16px;
       height: 16px;
       fill: #fff;
+      pointer-events: none;
     }
   `;
   document.head.appendChild(style);
@@ -367,7 +373,21 @@
 
     // Tweet text
     const textEl = article.querySelector('[data-testid="tweetText"]');
-    const fullText = textEl ? textEl.innerText : '';
+    let fullText = textEl ? textEl.innerText : '';
+
+    // Fallback: extract text from embedded article/card if tweet text is empty
+    if (!fullText) {
+      // Try any card wrapper (articles, links, polls, etc.)
+      const cardEl = article.querySelector('[data-testid="card.wrapper"]');
+      if (cardEl) {
+        // Get all text content from the card, excluding hidden/script elements
+        const cardText = cardEl.innerText.trim();
+        if (cardText) {
+          // Clean up: collapse whitespace, remove "Article" badge text if standalone
+          fullText = cardText.replace(/^\s*Article\s*\n?/i, '').trim();
+        }
+      }
+    }
 
     // Display name and handle from User-Name
     const userNameEl = article.querySelector('[data-testid="User-Name"]');

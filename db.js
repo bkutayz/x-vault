@@ -281,14 +281,44 @@ export async function storeTweet(tweet) {
   const db = await openDB();
 
   // Check if already exists
-  const exists = await new Promise((resolve, reject) => {
+  const existing = await new Promise((resolve, reject) => {
     const tx = db.transaction('tweets', 'readonly');
     const req = tx.objectStore('tweets').get(tweet.tweetId);
-    req.onsuccess = () => resolve(!!req.result);
+    req.onsuccess = () => resolve(req.result || null);
     req.onerror = (e) => reject(e.target.error);
   });
 
-  if (exists) {
+  if (existing) {
+    // Update if existing record is missing text or engagement metrics
+    const needsUpdate = (!existing.fullText && tweet.fullText) ||
+      (!existing.viewCount && tweet.viewCount) ||
+      (!existing.retweetCount && tweet.retweetCount) ||
+      (!existing.replyCount && tweet.replyCount) ||
+      (!existing.bookmarkCount && tweet.bookmarkCount);
+
+    if (needsUpdate) {
+      const merged = { ...existing, ...tweet, capturedAt: existing.capturedAt };
+      // Keep existing non-empty text
+      if (existing.fullText) merged.fullText = existing.fullText;
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('tweets', 'readwrite');
+        const req = tx.objectStore('tweets').put(merged);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e.target.error);
+      });
+      // Re-index if text was added
+      if (!existing.fullText && tweet.fullText) {
+        try {
+          if (db.objectStoreNames.contains('searchIndex')) {
+            const words = tokenizeText(`${merged.fullText} ${merged.handle} ${merged.displayName}`);
+            await indexTweetWords(db, merged.tweetId, words);
+          }
+        } catch (e) {
+          console.warn('[X-Vault] Search indexing failed (non-critical):', e);
+        }
+      }
+      return { inserted: false, updated: true };
+    }
     return { inserted: false };
   }
 
