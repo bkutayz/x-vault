@@ -1,4 +1,4 @@
-# Twitter Scrape
+# X-Vault
 
 Chrome extension that passively captures tweets as you browse Twitter/X. Store them locally, search across them, and export to LLMs.
 

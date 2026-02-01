@@ -72,6 +72,20 @@ function createUserItem(user) {
   el.dataset.handle = user.handle;
   if (selectedUser === user.handle) el.classList.add('active');
 
+  // Avatar
+  const avatar = document.createElement('div');
+  avatar.className = 'user-avatar';
+  if (user.avatarUrl) {
+    const img = document.createElement('img');
+    img.src = user.avatarUrl;
+    img.alt = `@${user.handle}`;
+    avatar.appendChild(img);
+  } else {
+    // Default avatar placeholder
+    avatar.innerHTML = `<span class="avatar-placeholder">${user.handle.charAt(0).toUpperCase()}</span>`;
+  }
+  el.appendChild(avatar);
+
   if (user.starred) {
     const star = document.createElement('span');
     star.className = 'user-star';

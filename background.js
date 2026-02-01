@@ -132,6 +132,12 @@ async function handleMessage(message) {
     case 'UPDATE_USER_NOTES':
       return await updateUserNotes(message.handle, message.notes);
 
+    case 'OPEN_POPUP': {
+      // Open the dashboard in a new tab
+      chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+      return { opened: true };
+    }
+
     default:
       console.error('[TwitterScrape] Unknown message type received:', message.type, message);
       return { error: 'Unknown message type' };

@@ -1,18 +1,30 @@
 {
   "manifest_version": 3,
-  "name": "Twitter Scrape",
+  "name": "X-Vault",
   "version": "1.0.0",
   "description": "Passively captures tweets from Twitter/X as you browse. Search, browse, and export for LLM context.",
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": ["*://twitter.com/*", "*://x.com/*"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://twitter.com/*",
+    "*://x.com/*"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["*://twitter.com/*", "*://x.com/*"],
-      "js": ["content.js"],
+      "matches": [
+        "*://twitter.com/*",
+        "*://x.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

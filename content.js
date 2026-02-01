@@ -1,8 +1,10 @@
 (() => {
   const processedIds = new Set();
   let debounceTimer = null;
+  let currentProfileHandle = null;
+  let floatingBtn = null;
 
-  // Inject styles for the captured badge
+  // Inject styles for the captured badge and floating button
   const style = document.createElement('style');
   style.textContent = `
     .ts-captured-badge {
@@ -35,8 +37,175 @@
       pointer-events: none;
       opacity: 0.85;
     }
+    .ts-floating-btn {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #1DA1F2;
+      border: 3px solid #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      cursor: pointer;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .ts-floating-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+    .ts-floating-btn img {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .ts-floating-btn .ts-count-badge {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      background: #e0245e;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 2px 6px;
+      border-radius: 10px;
+      min-width: 20px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      border: 2px solid #fff;
+    }
+    .ts-floating-btn .ts-default-icon {
+      width: 28px;
+      height: 28px;
+      fill: #fff;
+    }
   `;
   document.head.appendChild(style);
+
+  // Create floating button
+  function createFloatingButton() {
+    if (floatingBtn) return;
+
+    floatingBtn = document.createElement('div');
+    floatingBtn.className = 'ts-floating-btn';
+    floatingBtn.title = 'Twitter Scrape - Click to open';
+    floatingBtn.innerHTML = `
+      <svg class="ts-default-icon" viewBox="0 0 24 24">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l4.59-4.59L18 11l-6 6z"/>
+      </svg>
+      <div class="ts-count-badge">0</div>
+    `;
+
+    floatingBtn.addEventListener('click', () => {
+      // Send message to open popup - this will trigger background to open popup
+      chrome.runtime.sendMessage({ type: 'OPEN_POPUP' }).catch(() => { });
+    });
+
+    document.body.appendChild(floatingBtn);
+  }
+
+  // Update floating button with user info
+  async function updateFloatingButton(handle, avatarUrl) {
+    if (!floatingBtn) createFloatingButton();
+
+    currentProfileHandle = handle;
+
+    // Update avatar
+    if (avatarUrl) {
+      const existingImg = floatingBtn.querySelector('img');
+      const existingSvg = floatingBtn.querySelector('svg');
+
+      if (existingImg) {
+        existingImg.src = avatarUrl;
+      } else {
+        if (existingSvg) existingSvg.remove();
+        const img = document.createElement('img');
+        img.src = avatarUrl;
+        img.alt = `@${handle}`;
+        floatingBtn.insertBefore(img, floatingBtn.firstChild);
+      }
+    }
+
+    // Get user tweet count
+    try {
+      const user = await chrome.runtime.sendMessage({ type: 'GET_USER', handle });
+      const countBadge = floatingBtn.querySelector('.ts-count-badge');
+      if (countBadge) {
+        countBadge.textContent = user?.tweetCount || 0;
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+
+    floatingBtn.title = `@${handle} - Click to open Twitter Scrape`;
+  }
+
+  // Detect current profile from URL
+  function detectProfileFromURL() {
+    const path = window.location.pathname;
+    // Match /@username or /username but not /home, /explore, /notifications, etc.
+    const reserved = ['home', 'explore', 'notifications', 'messages', 'search', 'settings', 'i', 'compose'];
+    const match = path.match(/^\/([a-zA-Z0-9_]+)/);
+
+    if (match && !reserved.includes(match[1].toLowerCase())) {
+      return match[1].toLowerCase();
+    }
+    return null;
+  }
+
+  // Extract profile avatar from page
+  function getProfileAvatar() {
+    // Try to get avatar from profile header
+    const profileImg = document.querySelector('a[href$="/photo"] img[src*="profile_images"]');
+    if (profileImg) return profileImg.src;
+
+    // Fallback: get from first tweet by this user
+    const handle = detectProfileFromURL();
+    if (handle) {
+      const articles = document.querySelectorAll('article[data-testid="tweet"]');
+      for (const article of articles) {
+        const link = article.querySelector(`a[href="/${handle}" i]`);
+        if (link) {
+          const img = article.querySelector('img[src*="profile_images"]');
+          if (img) return img.src;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Check and update profile button
+  function checkProfile() {
+    const handle = detectProfileFromURL();
+    if (handle && handle !== currentProfileHandle) {
+      const avatar = getProfileAvatar();
+      updateFloatingButton(handle, avatar);
+    } else if (handle && currentProfileHandle === handle) {
+      // Same profile, just refresh the count
+      refreshButtonCount();
+    }
+  }
+
+  // Refresh just the count
+  async function refreshButtonCount() {
+    if (!currentProfileHandle || !floatingBtn) return;
+
+    try {
+      const user = await chrome.runtime.sendMessage({ type: 'GET_USER', handle: currentProfileHandle });
+      const countBadge = floatingBtn.querySelector('.ts-count-badge');
+      if (countBadge) {
+        countBadge.textContent = user?.tweetCount || 0;
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+  }
 
   function markCaptured(article) {
     if (article.querySelector('.ts-captured-badge') || article.querySelector('.ts-blocked-badge')) return;
@@ -143,6 +312,8 @@
           markBlocked(article);
         } else {
           markCaptured(article);
+          // Refresh button count after capturing
+          refreshButtonCount();
         }
       }).catch(() => {
         // Extension context may have been invalidated; ignore
@@ -150,17 +321,46 @@
     }
   }
 
+  // Listen for real-time updates from background
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'TWEET_ADDED' && message.tweet.handle === currentProfileHandle) {
+      refreshButtonCount();
+    }
+  });
+
+  // Handle URL changes (SPA navigation)
+  let lastUrl = location.href;
+  const urlObserver = new MutationObserver(() => {
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      setTimeout(checkProfile, 500); // Wait for page to render
+    }
+  });
+
+  // Initial setup
+  createFloatingButton();
+  setTimeout(checkProfile, 1000); // Initial profile check
+
   // Initial scan
   processTweets();
 
   // Observe DOM for new tweets (infinite scroll, SPA navigation)
   const observer = new MutationObserver(() => {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(processTweets, 300);
+    debounceTimer = setTimeout(() => {
+      processTweets();
+      checkProfile();
+    }, 300);
   });
 
   observer.observe(document.body, {
     childList: true,
     subtree: true
   });
+
+  urlObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
 })();
+
