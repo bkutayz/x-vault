@@ -6,10 +6,11 @@ Chrome extension that passively captures tweets as you browse Twitter/X. Store t
 
 - Captures tweets from any profile you visit — no API keys needed
 - Stores everything locally in your browser (IndexedDB)
-- Search across all captured tweets
+- Fast search with inverted index
 - One-click export with LLM prompt templates ("Summarize thinking", "Key beliefs", etc.)
 - Star users you care about, block/delete the rest
 - Bulk cleanup: remove anyone with N or fewer tweets
+- Export/import your entire database
 
 ## Features
 
@@ -43,13 +44,22 @@ A floating button appears on Twitter/X pages showing:
 4. Click any **Ask LLM** button to copy tweets + a prompt to your clipboard, then paste into Claude/ChatGPT
 5. Toggle **Home** checkbox in popup to enable/disable home feed capture
 
+## Performance
+
+Built for scale — optimized for 50,000+ tweets:
+
+- **Inverted index** for fast text search (no full-table scans)
+- **O(1) blocked user checks** via dedicated store
+- **Pre-sorted user list** using compound index
+- **Incremental tweet counts** (no recounting)
+
 ## Files
 
 ```
 manifest.json   - Chrome extension manifest (MV3)
 content.js      - Scrapes tweets from Twitter/X pages
 background.js   - Service worker handling storage
-db.js           - IndexedDB operations
+db.js           - IndexedDB operations (v5 schema)
 dashboard.*     - Full-page dashboard UI
 popup.*         - Extension popup UI
 icons/          - Extension icons

@@ -590,6 +590,69 @@ document.getElementById('cleanup-btn').addEventListener('click', async () => {
   }
 });
 
+// ==================== Export / Import Database ====================
+
+document.getElementById('export-db-btn').addEventListener('click', async () => {
+  try {
+    const data = await sendMessage({ type: 'EXPORT_DATABASE' });
+    if (!data || data.error) {
+      showToast('Export failed');
+      return;
+    }
+
+    // Create downloadable JSON file
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `x-vault-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast(`Exported ${data.tweets.length} tweets, ${data.users.length} users`);
+  } catch (err) {
+    console.error('[Dashboard] Export failed:', err);
+    showToast('Export failed');
+  }
+});
+
+document.getElementById('import-db-btn').addEventListener('click', () => {
+  document.getElementById('import-file-input').click();
+});
+
+document.getElementById('import-file-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+
+    // Validate basic structure
+    if (!data.tweets && !data.users) {
+      showToast('Invalid backup file');
+      return;
+    }
+
+    const result = await sendMessage({ type: 'IMPORT_DATABASE', data, merge: true });
+    if (!result || result.error) {
+      showToast('Import failed');
+      return;
+    }
+
+    showToast(`Imported ${result.imported.tweets} tweets, ${result.imported.users} users`);
+    await reloadAll();
+  } catch (err) {
+    console.error('[Dashboard] Import failed:', err);
+    showToast('Import failed: Invalid file');
+  }
+
+  // Reset file input
+  e.target.value = '';
+});
+
 // ==================== Blocked Users Modal ====================
 
 document.getElementById('blocked-list-btn').addEventListener('click', async () => {
