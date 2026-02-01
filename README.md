@@ -2,8 +2,9 @@
 
 Chrome extension that passively captures tweets as you browse Twitter/X. Store them locally, search across them, and export to LLMs.
 
-<video src="https://github.com/codyzyke/x-vault/raw/main/demo.mp4" controls="controls" style="max-width: 100%;">
-</video>
+<a href="https://youtu.be/ZXNrPCttkHM" target="_blank">
+ <img src="https://img.youtube.com/vi/ZXNrPCttkHM/0.jpg" alt="Watch the demo" style="max-width: 500px;" />
+</a>
 
 ## What it does
 
