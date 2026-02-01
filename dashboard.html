@@ -13,18 +13,9 @@
       <h1>X-Vault</h1>
     </div>
     <div class="header-right">
-      <div id="cleanup-bar">
-        <span class="cleanup-label">Remove users with</span>
-        <input type="number" id="cleanup-threshold" value="2" min="1" max="999">
-        <span class="cleanup-label">or fewer</span>
-        <button id="cleanup-btn">Clean up</button>
-      </div>
-      <button id="settings-btn" title="Settings">⚙️</button>
-      <button id="export-db-btn" title="Export database backup">Export</button>
-      <button id="import-db-btn" title="Import database backup">Import</button>
-      <input type="file" id="import-file-input" accept=".json" style="display: none;">
-      <button id="blocked-list-btn" title="Manage blocked users">Blocked</button>
+      <button id="settings-btn" title="Settings">⚙️ Settings</button>
       <span id="tweet-count">0 tweets</span>
+      <input type="file" id="import-file-input" accept=".json" style="display: none;">
     </div>
   </header>
 
@@ -90,24 +81,6 @@
     </div>
   </footer>
 
-  <!-- Blocked users modal -->
-  <div id="modal-overlay" class="hidden">
-    <div id="modal">
-      <div id="modal-header">
-        <h2>Blocked Users</h2>
-        <button id="modal-close">&times;</button>
-      </div>
-      <div id="modal-body">
-        <p id="blocked-empty">No blocked users.</p>
-        <div id="blocked-list"></div>
-        <div id="block-add">
-          <input type="text" id="block-input" placeholder="@handle to block">
-          <button id="block-add-btn">Block</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Custom prompt modal -->
   <div id="prompt-modal-overlay" class="hidden">
     <div id="prompt-modal">
@@ -130,6 +103,7 @@
         <button id="settings-modal-close">&times;</button>
       </div>
       <div id="settings-modal-body">
+        <!-- Home Feed Capture -->
         <div class="settings-section">
           <h3>Home Feed Capture</h3>
           <label class="settings-toggle">
@@ -148,6 +122,38 @@
             </div>
           </div>
         </div>
+
+        <!-- Data Cleanup -->
+        <div class="settings-section">
+          <h3>Data Cleanup</h3>
+          <div class="cleanup-row">
+            <span>Remove users with</span>
+            <input type="number" id="cleanup-threshold" value="2" min="1" max="999">
+            <span>or fewer tweets</span>
+            <button id="cleanup-btn" class="settings-action-btn danger">Clean up</button>
+          </div>
+        </div>
+
+        <!-- Blocked Users -->
+        <div class="settings-section">
+          <h3>Blocked Users</h3>
+          <p class="settings-hint">Blocked users won't be captured.</p>
+          <div id="blocked-list-inline"></div>
+          <div class="block-add-row">
+            <input type="text" id="block-input" placeholder="@handle to block">
+            <button id="block-add-btn" class="settings-action-btn danger">Block</button>
+          </div>
+        </div>
+
+        <!-- Database -->
+        <div class="settings-section">
+          <h3>Database</h3>
+          <div class="settings-buttons-row">
+            <button id="export-db-btn" class="settings-action-btn">Export Backup</button>
+            <button id="import-db-btn" class="settings-action-btn">Import Backup</button>
+          </div>
+        </div>
+
         <button id="settings-save-btn">Save Settings</button>
       </div>
     </div>

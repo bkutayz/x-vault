@@ -844,16 +844,120 @@ footer select {
 }
 
 #settings-btn {
-  padding: 5px 12px;
+  padding: 6px 14px;
   border: 1px solid #e1e8ed;
   border-radius: 16px;
   background: #fff;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
 }
 
 #settings-btn:hover {
   border-color: #1DA1F2;
+  background: #f0f7ff;
+}
+
+/* Cleanup row in settings */
+.cleanup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.cleanup-row input[type="number"] {
+  width: 50px;
+  padding: 5px 8px;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Block add row */
+.block-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.block-add-row input[type="text"] {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+
+.block-add-row input:focus {
+  border-color: #1DA1F2;
+}
+
+/* Inline blocked list */
+#blocked-list-inline {
+  max-height: 100px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+#blocked-list-inline .blocked-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f5f8fa;
+  border: 1px solid #e1e8ed;
+  border-radius: 16px;
+  padding: 4px 10px;
+  margin: 3px 4px 3px 0;
+  font-size: 12px;
+}
+
+#blocked-list-inline .blocked-tag button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #657786;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+#blocked-list-inline .blocked-tag button:hover {
+  color: #e0245e;
+}
+
+/* Settings action buttons */
+.settings-action-btn {
+  padding: 6px 14px;
+  border: 1px solid #1DA1F2;
+  border-radius: 16px;
+  background: #fff;
+  color: #1DA1F2;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.settings-action-btn:hover {
+  background: #1DA1F2;
+  color: #fff;
+}
+
+.settings-action-btn.danger {
+  border-color: #e0245e;
+  color: #e0245e;
+}
+
+.settings-action-btn.danger:hover {
+  background: #e0245e;
+  color: #fff;
+}
+
+.settings-buttons-row {
+  display: flex;
+  gap: 10px;
 }
 
 /* Toast */

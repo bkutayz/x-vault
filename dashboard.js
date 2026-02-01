@@ -653,51 +653,30 @@ document.getElementById('import-file-input').addEventListener('change', async (e
   e.target.value = '';
 });
 
-// ==================== Blocked Users Modal ====================
+// ==================== Blocked Users (Inline in Settings) ====================
 
-document.getElementById('blocked-list-btn').addEventListener('click', async () => {
-  await renderBlockedList();
-  document.getElementById('modal-overlay').classList.remove('hidden');
-});
-
-document.getElementById('modal-close').addEventListener('click', () => {
-  document.getElementById('modal-overlay').classList.add('hidden');
-});
-
-document.getElementById('modal-overlay').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
-});
-
-async function renderBlockedList() {
+async function renderBlockedListInline() {
   const blocked = await sendMessage({ type: 'GET_BLOCKED_USERS' });
-  const list = document.getElementById('blocked-list');
-  const empty = document.getElementById('blocked-empty');
+  const list = document.getElementById('blocked-list-inline');
   list.innerHTML = '';
 
   if (!blocked || blocked.length === 0) {
-    empty.classList.remove('hidden');
+    list.innerHTML = '<span style="color: #657786; font-size: 12px;">No blocked users yet.</span>';
     return;
   }
 
-  empty.classList.add('hidden');
   for (const handle of blocked) {
-    const item = document.createElement('div');
-    item.className = 'blocked-item';
+    const tag = document.createElement('span');
+    tag.className = 'blocked-tag';
+    tag.innerHTML = `@${handle} <button title="Unblock">&times;</button>`;
 
-    const name = document.createElement('span');
-    name.textContent = `@${handle}`;
-    item.appendChild(name);
-
-    const unblockBtn = document.createElement('button');
-    unblockBtn.textContent = 'Unblock';
-    unblockBtn.addEventListener('click', async () => {
+    tag.querySelector('button').addEventListener('click', async () => {
       await sendMessage({ type: 'UNBLOCK_USER', handle });
       showToast(`Unblocked @${handle}`);
-      await renderBlockedList();
+      await renderBlockedListInline();
     });
-    item.appendChild(unblockBtn);
 
-    list.appendChild(item);
+    list.appendChild(tag);
   }
 }
 
@@ -709,7 +688,7 @@ document.getElementById('block-add-btn').addEventListener('click', async () => {
   await sendMessage({ type: 'BLOCK_USER', handle });
   input.value = '';
   showToast(`Blocked @${handle}`);
-  await renderBlockedList();
+  await renderBlockedListInline();
   await reloadAll();
 });
 
@@ -730,6 +709,9 @@ document.getElementById('settings-btn').addEventListener('click', async () => {
 
   // Show/hide thresholds based on enabled state
   thresholdsDiv.classList.toggle('hidden', !enabledCheckbox.checked);
+
+  // Load blocked users inline
+  await renderBlockedListInline();
 
   document.getElementById('settings-modal-overlay').classList.remove('hidden');
 });
