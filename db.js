@@ -1,5 +1,5 @@
 const DB_NAME = 'TwitterScrapeDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbInstance = null;
 
@@ -21,7 +21,15 @@ export function openDB() {
       }
 
       if (!db.objectStoreNames.contains('users')) {
-        db.createObjectStore('users', { keyPath: 'handle' });
+        const userStore = db.createObjectStore('users', { keyPath: 'handle' });
+        // V4: Add index for sorted retrieval (starred desc, tweetCount desc)
+        userStore.createIndex('bySortOrder', ['starred', 'tweetCount'], { unique: false });
+      } else if (event.oldVersion < 4) {
+        // Add index to existing store
+        const userStore = tx.objectStore('users');
+        if (!userStore.indexNames.contains('bySortOrder')) {
+          userStore.createIndex('bySortOrder', ['starred', 'tweetCount'], { unique: false });
+        }
       }
 
       if (!db.objectStoreNames.contains('settings')) {
@@ -292,17 +300,38 @@ export async function getAllUsers() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('users', 'readonly');
     const store = tx.objectStore('users');
-    const req = store.getAll();
-    req.onsuccess = () => {
-      const users = req.result.sort((a, b) => {
-        // Starred first, then by tweet count
-        if (a.starred && !b.starred) return -1;
-        if (!a.starred && b.starred) return 1;
-        return (b.tweetCount || 0) - (a.tweetCount || 0);
-      });
-      resolve(users);
-    };
-    req.onerror = (e) => reject(e.target.error);
+
+    // Try to use index for sorted retrieval (starred desc, tweetCount desc)
+    // Index key: [starred (boolean), tweetCount (number)]
+    // 'prev' direction gives us: true before false, high numbers before low
+    if (store.indexNames.contains('bySortOrder')) {
+      const index = store.index('bySortOrder');
+      const results = [];
+      const req = index.openCursor(null, 'prev');
+
+      req.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          results.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+      req.onerror = (e) => reject(e.target.error);
+    } else {
+      // Fallback: load all and sort in memory (for upgrades in progress)
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const users = req.result.sort((a, b) => {
+          if (a.starred && !b.starred) return -1;
+          if (!a.starred && b.starred) return 1;
+          return (b.tweetCount || 0) - (a.tweetCount || 0);
+        });
+        resolve(users);
+      };
+      req.onerror = (e) => reject(e.target.error);
+    }
   });
 }
 
