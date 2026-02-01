@@ -180,13 +180,135 @@ body {
   color: #14171a;
 }
 
-/* Recent Tweets & Search Results */
-#recent-tweets,
+/* Recent Tweets (Masonry Grid) */
+#recent-tweets {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 28px;
+  background: #f5f8fa;
+  column-count: 3;
+  column-gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  #recent-tweets { column-count: 2; }
+}
+
+@media (max-width: 800px) {
+  #recent-tweets { column-count: 1; }
+}
+
+/* Search Results */
 #search-results {
   flex: 1;
   overflow-y: auto;
   padding: 16px 28px;
   background: #f5f8fa;
+}
+
+/* Grid Card */
+.grid-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  break-inside: avoid;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.15s, transform 0.15s;
+  border: 1px solid #e1e8ed;
+}
+
+.grid-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.grid-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.grid-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.grid-avatar-placeholder {
+  background: #e1e8ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #657786;
+}
+
+.grid-card-user {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #14171a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid-card-handle {
+  font-size: 12px;
+  color: #657786;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grid-card-link {
+  color: #657786;
+  text-decoration: none;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.grid-card-link:hover {
+  color: #1DA1F2;
+}
+
+.grid-card-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #14171a;
+  word-wrap: break-word;
+  margin-bottom: 12px;
+}
+
+.grid-metrics {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid #f0f3f5;
+}
+
+.grid-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #657786;
+}
+
+.grid-metric svg {
+  opacity: 0.6;
 }
 
 .empty-state {
@@ -527,6 +649,24 @@ body {
   line-height: 1.5;
   color: #14171a;
   word-wrap: break-word;
+}
+
+.tweet-metrics {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.tweet-metric {
+  font-size: 12px;
+  color: #657786;
+}
+
+.tweet-captured {
+  font-size: 12px;
+  color: #1DA1F2;
+  margin-left: auto;
 }
 
 .retweet-badge {

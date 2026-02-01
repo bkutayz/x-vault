@@ -40,6 +40,13 @@ function formatTimestamp(iso) {
   });
 }
 
+function formatMetricCount(n) {
+  if (!n || n === 0) return '';
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+
 function formatDate(iso) {
   if (!iso) return '?';
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -756,8 +763,8 @@ async function loadHomeView() {
   document.getElementById('stat-starred-users').textContent = starredUsers;
   document.getElementById('tweet-count').textContent = `${totalTweets} tweets`;
 
-  // Load recent tweets
-  const recentTweets = await sendMessage({ type: 'SEARCH_TWEETS', query: '', limit: 50 });
+  // Load recent tweets by capture time
+  const recentTweets = await sendMessage({ type: 'GET_RECENT_TWEETS', limit: 50 });
   renderRecentTweets(recentTweets || []);
 }
 
@@ -774,8 +781,49 @@ function renderRecentTweets(tweets) {
   tweets.sort((a, b) => new Date(b.capturedAt) - new Date(a.capturedAt));
 
   for (const tweet of tweets.slice(0, 30)) {
-    container.appendChild(createTweetCard(tweet, true));
+    container.appendChild(createGridCard(tweet));
   }
+}
+
+function createGridCard(tweet) {
+  const card = document.createElement('div');
+  card.className = 'grid-card';
+  card.dataset.tweetId = tweet.tweetId;
+
+  let retweetHtml = '';
+  if (tweet.isRetweet && tweet.retweetedBy) {
+    retweetHtml = `<div class="retweet-badge">Reposted by @${escapeHtml(tweet.retweetedBy)}</div>`;
+  }
+
+  // Build metrics row
+  const metrics = [];
+  if (tweet.replyCount) metrics.push(`<span class="grid-metric" title="Replies"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.25-.893 4.306-2.394 5.82l-4.36 4.36a.75.75 0 01-1.06 0l-.72-.72a.75.75 0 010-1.06l4.36-4.36A5.63 5.63 0 0020.501 10.13 6.38 6.38 0 0014.122 3.75h-4.366a6.25 6.25 0 00-6.255 6.25c0 1.903.855 3.604 2.2 4.748l.09.07a.75.75 0 01-.48 1.34H3.59a.75.75 0 01-.54-.23A7.98 7.98 0 011.751 10z" fill="currentColor"/></svg> ${formatMetricCount(tweet.replyCount)}</span>`);
+  if (tweet.retweetCount) metrics.push(`<span class="grid-metric" title="Reposts"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2h3v2h-3c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM19.5 20.12l-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2h-3V4h3c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14z" fill="currentColor"/></svg> ${formatMetricCount(tweet.retweetCount)}</span>`);
+  if (tweet.likeCount) metrics.push(`<span class="grid-metric" title="Likes"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.56-1.13-1.666-1.84-2.908-1.91z" fill="currentColor"/></svg> ${formatMetricCount(tweet.likeCount)}</span>`);
+  if (tweet.bookmarkCount) metrics.push(`<span class="grid-metric" title="Bookmarks"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z" fill="currentColor"/></svg> ${formatMetricCount(tweet.bookmarkCount)}</span>`);
+  if (tweet.viewCount || tweet.impressionCount) metrics.push(`<span class="grid-metric" title="Views"><svg viewBox="0 0 24 24" width="14" height="14"><path d="M8.75 21V3h2v18h-2zM18.75 21V8.5h2V21h-2zM13.75 21v-9h2v9h-2zM3.75 21v-4h2v4h-2z" fill="currentColor"/></svg> ${formatMetricCount(tweet.viewCount || tweet.impressionCount)}</span>`);
+  const metricsHtml = metrics.length > 0 ? `<div class="grid-metrics">${metrics.join('')}</div>` : '';
+
+  // Avatar
+  const avatarHtml = tweet.avatarUrl
+    ? `<img class="grid-avatar" src="${escapeHtml(tweet.avatarUrl)}" alt="@${escapeHtml(tweet.handle)}">`
+    : `<div class="grid-avatar grid-avatar-placeholder">${escapeHtml(tweet.handle.charAt(0).toUpperCase())}</div>`;
+
+  card.innerHTML = `
+    ${retweetHtml}
+    <div class="grid-card-header">
+      ${avatarHtml}
+      <div class="grid-card-user">
+        <span class="grid-card-name">${escapeHtml(tweet.displayName)}</span>
+        <span class="grid-card-handle">@${escapeHtml(tweet.handle)} &middot; ${formatTimestamp(tweet.timestamp)}</span>
+      </div>
+      <a href="${escapeHtml(tweet.url)}" target="_blank" class="grid-card-link" title="Open on X">\u2197</a>
+    </div>
+    <div class="grid-card-text">${escapeHtml(tweet.fullText)}</div>
+    ${metricsHtml}
+  `;
+
+  return card;
 }
 
 function createTweetCard(tweet, isReadOnly = false) {
@@ -795,6 +843,18 @@ function createTweetCard(tweet, isReadOnly = false) {
 
   const deleteBtn = isReadOnly ? '' : `<button class="tweet-delete-btn" title="Delete tweet">\u00d7</button>`;
 
+  // Build metrics bar if any engagement data exists
+  const metrics = [];
+  if (tweet.replyCount) metrics.push(`<span class="tweet-metric" title="Replies">\u{1F4AC} ${formatMetricCount(tweet.replyCount)}</span>`);
+  if (tweet.retweetCount) metrics.push(`<span class="tweet-metric" title="Reposts">\u{1F501} ${formatMetricCount(tweet.retweetCount)}</span>`);
+  if (tweet.likeCount) metrics.push(`<span class="tweet-metric" title="Likes">\u2764 ${formatMetricCount(tweet.likeCount)}</span>`);
+  if (tweet.viewCount || tweet.impressionCount) metrics.push(`<span class="tweet-metric" title="Views">\u{1F4CA} ${formatMetricCount(tweet.viewCount || tweet.impressionCount)}</span>`);
+  if (tweet.bookmarkCount) metrics.push(`<span class="tweet-metric" title="Bookmarks">\u{1F516} ${formatMetricCount(tweet.bookmarkCount)}</span>`);
+  const metricsHtml = metrics.length > 0 ? `<div class="tweet-metrics">${metrics.join('')}</div>` : '';
+
+  // Show captured time for home view
+  const capturedHtml = tweet.capturedAt ? `<span class="tweet-captured" title="Captured ${new Date(tweet.capturedAt).toLocaleString()}">captured ${formatTimestamp(tweet.capturedAt)}</span>` : '';
+
   card.innerHTML = `
     ${checkboxHtml}
     <div class="tweet-content">
@@ -803,10 +863,12 @@ function createTweetCard(tweet, isReadOnly = false) {
         <strong>${escapeHtml(tweet.displayName)}</strong>
         <span class="handle">@${escapeHtml(tweet.handle)}</span>
         <span class="timestamp">${formatTimestamp(tweet.timestamp)}</span>
+        ${capturedHtml}
         <a href="${escapeHtml(tweet.url)}" target="_blank" class="tweet-link" title="Open on X">\u2197</a>
         ${deleteBtn}
       </div>
       <div class="tweet-text">${escapeHtml(tweet.fullText)}</div>
+      ${metricsHtml}
     </div>
   `;
 

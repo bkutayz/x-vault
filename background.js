@@ -28,7 +28,8 @@ import {
   setUserStarred,
   updateUserNotes,
   exportAllData,
-  importAllData
+  importAllData,
+  getRecentTweets
 } from './db.js';
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -90,6 +91,9 @@ async function handleMessage(message) {
 
     case 'GET_TWEET_COUNT':
       return await getTweetCount();
+
+    case 'GET_RECENT_TWEETS':
+      return await getRecentTweets({ limit: message.limit || 50 });
 
     case 'GET_ALL_TWEETS_FOR_USER':
       return await getAllTweetsForUser(message.handle);

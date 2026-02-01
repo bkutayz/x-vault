@@ -404,76 +404,83 @@
       }
     }
 
-    // Extract engagement metrics (likes, impressions)
+    // Extract engagement metrics
     let likeCount = 0;
     let impressionCount = 0;
+    let replyCount = 0;
+    let retweetCount = 0;
+    let bookmarkCount = 0;
+    let viewCount = 0;
 
-    // Like count - find the like button group and get aria-label or inner text
-    const likeBtn = article.querySelector('[data-testid="like"], [data-testid="unlike"]');
-    if (likeBtn) {
-      // Try aria-label first - Twitter uses formats like "275 Likes. Like" or "Like"
-      const likeLabel = likeBtn.getAttribute('aria-label') || '';
-      // Match patterns: "275 Likes", "1.2K Likes", "275 Like" 
-      const likeMatch = likeLabel.match(/([\d,\.]+[KkMm]?)\s*(like|likes)/i);
-      if (likeMatch) {
-        likeCount = parseMetricValue(likeMatch[1]);
-      }
-
-      // If aria-label didn't work, try the span inside the button
-      if (likeCount === 0) {
-        const spans = likeBtn.querySelectorAll('span');
+    // Helper: extract count from a button by data-testid
+    function extractButtonCount(testIds) {
+      for (const testId of testIds) {
+        const btn = article.querySelector(`[data-testid="${testId}"]`);
+        if (!btn) continue;
+        // Try aria-label first
+        const label = btn.getAttribute('aria-label') || '';
+        const match = label.match(/([\d,\.]+[KkMm]?)/);
+        if (match) {
+          const val = parseMetricValue(match[1]);
+          if (val > 0) return val;
+        }
+        // Try span text inside button
+        const spans = btn.querySelectorAll('span');
         for (const span of spans) {
           const text = span.textContent.trim();
           if (/^[\d,\.]+[KkMm]?$/.test(text)) {
-            likeCount = parseMetricValue(text);
-            break;
+            const val = parseMetricValue(text);
+            if (val > 0) return val;
           }
         }
       }
+      return 0;
     }
 
-    // Impressions/views - look for the analytics link (views are usually the last item in the action bar)
+    // Reply count
+    replyCount = extractButtonCount(['reply']);
+
+    // Retweet count
+    retweetCount = extractButtonCount(['retweet', 'unretweet']);
+
+    // Like count
+    likeCount = extractButtonCount(['like', 'unlike']);
+
+    // Bookmark count
+    bookmarkCount = extractButtonCount(['bookmark', 'removeBookmark']);
+
+    // Views/impressions - look for the analytics link
     const viewLink = article.querySelector('a[href*="/analytics"]');
     if (viewLink) {
-      const viewText = viewLink.textContent.trim();
-      impressionCount = parseMetricValue(viewText);
+      viewCount = parseMetricValue(viewLink.textContent.trim());
     }
 
     // Fallback: look in aria-label of the views icon or parent container
-    if (impressionCount === 0) {
+    if (viewCount === 0) {
       const allLinks = article.querySelectorAll('a[role="link"]');
       for (const link of allLinks) {
         const href = link.getAttribute('href') || '';
-        // Views link typically contains /analytics or has the chart icon
         if (href.includes('analytics')) {
-          const text = link.textContent.trim();
-          const val = parseMetricValue(text);
-          if (val > 0) {
-            impressionCount = val;
-            break;
-          }
+          const val = parseMetricValue(link.textContent.trim());
+          if (val > 0) { viewCount = val; break; }
         }
       }
     }
 
-    // Final fallback: find the group with the chart/bar icon (views)
-    if (impressionCount === 0) {
+    // Final fallback: find the group with aria-label containing "views"
+    if (viewCount === 0) {
       const actionGroups = article.querySelectorAll('[role="group"]');
       for (const group of actionGroups) {
         const ariaLabel = group.getAttribute('aria-label') || '';
-        // Match "8,800 views" or "1.1K views"
         const viewMatch = ariaLabel.match(/([\d,\.]+[KkMm]?)\s*view/i);
         if (viewMatch) {
-          impressionCount = parseMetricValue(viewMatch[1]);
+          viewCount = parseMetricValue(viewMatch[1]);
           break;
         }
       }
     }
 
-    // Debug logging (remove in production)
-    if (likeCount > 0 || impressionCount > 0) {
-      console.log(`[X-Vault] Metrics for tweet ${tweetId}: likes=${likeCount}, impressions=${impressionCount}`);
-    }
+    impressionCount = viewCount;
 
     return {
       tweetId,
@@ -486,7 +493,11 @@
       capturedAt: new Date().toISOString(),
       isRetweet,
       retweetedBy,
+      replyCount,
+      retweetCount,
       likeCount,
+      bookmarkCount,
+      viewCount,
       impressionCount
     };
   }

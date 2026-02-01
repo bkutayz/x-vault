@@ -31,20 +31,26 @@ content.js (on X pages) → background.js (service worker) → db.js (IndexedDB)
                           dashboard.js (UI)
 ```
 
-**`content.js`** — Content script injected on twitter.com/x.com. Uses MutationObserver (300ms debounce) to detect new tweets in the DOM, extracts metadata (text, handle, timestamps, like/impression counts), and sends `STORE_TWEET` messages to the background worker. Renders a floating button on profile pages for block/status indication.
+**`content.js`** — Content script injected on twitter.com/x.com. Uses MutationObserver (300ms debounce) to detect new tweets in the DOM, extracts metadata (text, handle, timestamps, like/impression counts), and sends `STORE_TWEET` messages to the background worker. Renders a floating button on profile pages for block/status indication. Home feed capture is configurable with like/impression thresholds.
 
-**`background.js`** — Service worker that acts as a message router. Receives all messages from both `content.js` and `dashboard.js`, delegates to `db.js` for persistence, and updates the extension badge count. All message types are `UPPERCASE_WITH_UNDERSCORES` constants (e.g., `STORE_TWEET`, `GET_USERS`, `SEARCH_TWEETS`, `BLOCK_USER`).
+**`background.js`** — Service worker that acts as a message router. Receives all messages from both `content.js` and `dashboard.js`, delegates to `db.js` for persistence, and updates the extension badge count. Clicking the extension icon opens the dashboard directly (no popup). All message types are `UPPERCASE_WITH_UNDERSCORES` constants (e.g., `STORE_TWEET`, `GET_USERS`, `SEARCH_TWEETS`, `BLOCK_USER`, `GET_HOME_FEED_SETTINGS`).
 
 **`db.js`** — IndexedDB abstraction layer. Database `TwitterScrapeDB` at version 5 with five object stores:
 - `tweets` (keyPath: `tweetId`) — indexes: `byUser`, `byTimestamp`, `byUserAndTime`
 - `users` (keyPath: `handle`) — index: `bySortOrder` ([starred, tweetCount])
 - `blockedUsers` (keyPath: `handle`) — O(1) block checks
-- `settings` (keyPath: `key`) — home feed settings, starred users
+- `settings` (keyPath: `key`) — home feed settings (enabled, minLikes, minImpressions), starred users
 - `searchIndex` (keyPath: `word`) — inverted index mapping words to tweetId arrays
 
 Schema migrations are handled in `onupgradeneeded` with version checks (V2→settings, V3→blockedUsers store, V4→sort index, V5→search index).
 
-**`dashboard.html` / `dashboard.js` / `dashboard.css`** — Full dashboard UI with user sidebar, tweet list, search, user notes, star/block actions, export (Markdown/JSON/Plain Text), and LLM prompt templates. Settings modal handles capture config, data cleanup, blocked users management, and database import/export.
+**`dashboard.html` / `dashboard.js` / `dashboard.css`** — Full dashboard UI with sidebar navigation:
+- **Home View**: Stats cards (total tweets, users tracked, starred) + recent tweets
+- **Users View**: User list sidebar, user context card, tweets, LLM prompts, export actions
+- **Search View**: Dedicated search with results
+- **Settings Modal**: Home feed capture thresholds, data cleanup, blocked users, database import/export
+
+View switching is handled by `showView(viewName)` which toggles `.view.active` classes and loads view-specific data.
 
 ## Key Performance Patterns
 
@@ -62,3 +68,4 @@ Schema migrations are handled in `onupgradeneeded` with version checks (V2→set
 - Console logging prefixed with `[X-Vault]`
 - User content escaped via `escapeHtml()` before DOM insertion
 - Promise chains (`.then()/.catch()`) and `async/await` are both used
+

@@ -1,5 +1,5 @@
 const DB_NAME = 'TwitterScrapeDB';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 let dbInstance = null;
 
@@ -62,6 +62,16 @@ export function openDB() {
       // Structure: { word: string, tweetIds: string[] }
       if (!db.objectStoreNames.contains('searchIndex')) {
         db.createObjectStore('searchIndex', { keyPath: 'word' });
+      }
+
+      // V6: Add index for fetching recently captured tweets
+      if (event.oldVersion < 6) {
+        const tweetStore = db.objectStoreNames.contains('tweets')
+          ? tx.objectStore('tweets')
+          : null;
+        if (tweetStore && !tweetStore.indexNames.contains('byCapturedAt')) {
+          tweetStore.createIndex('byCapturedAt', 'capturedAt', { unique: false });
+        }
       }
     };
 
@@ -620,6 +630,42 @@ export async function getTweetCount() {
     const req = store.count();
     req.onsuccess = () => resolve(req.result);
     req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+export async function getRecentTweets({ limit = 50 } = {}) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('tweets', 'readonly');
+    const store = tx.objectStore('tweets');
+
+    // Use byCapturedAt index if available, otherwise fall back to full scan
+    if (store.indexNames.contains('byCapturedAt')) {
+      const index = store.index('byCapturedAt');
+      const results = [];
+      const req = index.openCursor(null, 'prev');
+
+      req.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (!cursor || results.length >= limit) {
+          resolve(results);
+          return;
+        }
+        results.push(cursor.value);
+        cursor.continue();
+      };
+      req.onerror = (e) => reject(e.target.error);
+    } else {
+      // Fallback: get all and sort in memory
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const tweets = req.result
+          .sort((a, b) => (b.capturedAt || '').localeCompare(a.capturedAt || ''))
+          .slice(0, limit);
+        resolve(tweets);
+      };
+      req.onerror = (e) => reject(e.target.error);
+    }
   });
 }
 
