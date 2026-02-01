@@ -1,5 +1,5 @@
 const DB_NAME = 'TwitterScrapeDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbInstance = null;
 
@@ -11,6 +11,7 @@ export function openDB() {
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
+      const tx = event.target.transaction;
 
       if (!db.objectStoreNames.contains('tweets')) {
         const tweetStore = db.createObjectStore('tweets', { keyPath: 'tweetId' });
@@ -25,6 +26,28 @@ export function openDB() {
 
       if (!db.objectStoreNames.contains('settings')) {
         db.createObjectStore('settings', { keyPath: 'key' });
+      }
+
+      // V3: Add dedicated blockedUsers store for O(1) lookup
+      if (!db.objectStoreNames.contains('blockedUsers')) {
+        db.createObjectStore('blockedUsers', { keyPath: 'handle' });
+
+        // Migrate existing blocked users from settings array
+        if (event.oldVersion < 3 && event.oldVersion > 0) {
+          const settingsStore = tx.objectStore('settings');
+          const getReq = settingsStore.get('blockedUsers');
+          getReq.onsuccess = () => {
+            const oldBlocked = getReq.result?.value || [];
+            if (oldBlocked.length > 0) {
+              const blockedStore = tx.objectStore('blockedUsers');
+              for (const handle of oldBlocked) {
+                blockedStore.put({ handle, blockedAt: new Date().toISOString() });
+              }
+              // Clean up old settings entry
+              settingsStore.delete('blockedUsers');
+            }
+          };
+        }
       }
     };
 
@@ -62,29 +85,49 @@ async function setSetting(key, value) {
   });
 }
 
-// --- Blocked users ---
+// --- Blocked users (O(1) lookup via dedicated store) ---
 
 export async function getBlockedUsers() {
-  return getSetting('blockedUsers', []);
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('blockedUsers', 'readonly');
+    const req = tx.objectStore('blockedUsers').getAll();
+    req.onsuccess = () => resolve(req.result.map(r => r.handle));
+    req.onerror = (e) => reject(e.target.error);
+  });
 }
 
 export async function blockUser(handle) {
-  const blocked = await getBlockedUsers();
-  if (!blocked.includes(handle)) {
-    blocked.push(handle);
-    await setSetting('blockedUsers', blocked);
-  }
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('blockedUsers', 'readwrite');
+    const req = tx.objectStore('blockedUsers').put({
+      handle,
+      blockedAt: new Date().toISOString()
+    });
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e.target.error);
+  });
 }
 
 export async function unblockUser(handle) {
-  const blocked = await getBlockedUsers();
-  const filtered = blocked.filter(h => h !== handle);
-  await setSetting('blockedUsers', filtered);
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('blockedUsers', 'readwrite');
+    const req = tx.objectStore('blockedUsers').delete(handle);
+    req.onsuccess = () => resolve();
+    req.onerror = (e) => reject(e.target.error);
+  });
 }
 
 export async function isBlocked(handle) {
-  const blocked = await getBlockedUsers();
-  return blocked.includes(handle);
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('blockedUsers', 'readonly');
+    const req = tx.objectStore('blockedUsers').get(handle);
+    req.onsuccess = () => resolve(!!req.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
 }
 
 // --- Capture settings ---
