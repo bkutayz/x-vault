@@ -38,9 +38,7 @@
       opacity: 0.85;
     }
     .ts-floating-btn {
-      position: fixed;
-      top: 80px;
-      right: 20px;
+      position: relative;
       width: 56px;
       height: 56px;
       border-radius: 50%;
@@ -48,7 +46,6 @@
       border: 3px solid #fff;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       cursor: pointer;
-      z-index: 9999;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -85,13 +82,61 @@
       height: 28px;
       fill: #fff;
     }
+    .ts-floating-container {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      z-index: 9999;
+    }
+    .ts-block-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e0245e;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .ts-block-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      background: #c5203e;
+    }
+    .ts-block-btn.blocked {
+      background: #17bf63;
+    }
+    .ts-block-btn.blocked:hover {
+      background: #14a857;
+    }
+    .ts-block-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: #fff;
+    }
   `;
   document.head.appendChild(style);
 
   // Create floating button
-  function createFloatingButton() {
-    if (floatingBtn) return;
+  let floatingContainer = null;
+  let blockBtn = null;
+  let isCurrentUserBlocked = false;
 
+  function createFloatingButton() {
+    if (floatingContainer) return;
+
+    // Create container
+    floatingContainer = document.createElement('div');
+    floatingContainer.className = 'ts-floating-container';
+
+    // Create main button
     floatingBtn = document.createElement('div');
     floatingBtn.className = 'ts-floating-btn';
     floatingBtn.title = 'Twitter Scrape - Click to open';
@@ -107,7 +152,54 @@
       chrome.runtime.sendMessage({ type: 'OPEN_POPUP' }).catch(() => { });
     });
 
-    document.body.appendChild(floatingBtn);
+    // Create block button
+    blockBtn = document.createElement('div');
+    blockBtn.className = 'ts-block-btn';
+    blockBtn.title = 'Block this user from capture';
+    blockBtn.innerHTML = `
+      <svg viewBox="0 0 24 24">
+        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+      </svg>
+    `;
+
+    blockBtn.addEventListener('click', async () => {
+      if (!currentProfileHandle) return;
+
+      try {
+        if (isCurrentUserBlocked) {
+          // Unblock user
+          await chrome.runtime.sendMessage({ type: 'UNBLOCK_USER', handle: currentProfileHandle });
+          isCurrentUserBlocked = false;
+          blockBtn.classList.remove('blocked');
+          blockBtn.title = 'Block this user from capture';
+          blockBtn.innerHTML = `
+            <svg viewBox="0 0 24 24">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          `;
+        } else {
+          // Block user
+          await chrome.runtime.sendMessage({ type: 'BLOCK_USER', handle: currentProfileHandle });
+          isCurrentUserBlocked = true;
+          blockBtn.classList.add('blocked');
+          blockBtn.title = 'Unblock this user';
+          blockBtn.innerHTML = `
+            <svg viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+          `;
+          // Update count badge to 0 since user is now blocked
+          const countBadge = floatingBtn.querySelector('.ts-count-badge');
+          if (countBadge) countBadge.textContent = '0';
+        }
+      } catch (e) {
+        console.error('[TwitterScrape] Error toggling block:', e);
+      }
+    });
+
+    floatingContainer.appendChild(floatingBtn);
+    floatingContainer.appendChild(blockBtn);
+    document.body.appendChild(floatingContainer);
   }
 
   // Update floating button with user info
@@ -132,12 +224,38 @@
       }
     }
 
-    // Get user tweet count
+    // Get user tweet count and check blocked status
     try {
-      const user = await chrome.runtime.sendMessage({ type: 'GET_USER', handle });
+      const [user, blockedUsers] = await Promise.all([
+        chrome.runtime.sendMessage({ type: 'GET_USER', handle }),
+        chrome.runtime.sendMessage({ type: 'GET_BLOCKED_USERS' })
+      ]);
+
       const countBadge = floatingBtn.querySelector('.ts-count-badge');
       if (countBadge) {
         countBadge.textContent = user?.tweetCount || 0;
+      }
+
+      // Update block button state
+      isCurrentUserBlocked = blockedUsers?.includes(handle) || false;
+      if (blockBtn) {
+        if (isCurrentUserBlocked) {
+          blockBtn.classList.add('blocked');
+          blockBtn.title = 'Unblock this user';
+          blockBtn.innerHTML = `
+            <svg viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+          `;
+        } else {
+          blockBtn.classList.remove('blocked');
+          blockBtn.title = 'Block this user from capture';
+          blockBtn.innerHTML = `
+            <svg viewBox="0 0 24 24">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          `;
+        }
       }
     } catch (e) {
       // Ignore errors
