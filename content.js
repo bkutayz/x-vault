@@ -11,16 +11,16 @@
       position: absolute;
       top: 4px;
       right: 4px;
-      background: #1DA1F2;
-      color: #fff;
-      font-size: 10px;
-      font-weight: 600;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      padding: 2px 6px;
-      border-radius: 4px;
+      width: 20px;
+      height: 20px;
       z-index: 10;
       pointer-events: none;
-      opacity: 0.85;
+      opacity: 0.5;
+    }
+    .ts-captured-badge svg {
+      width: 100%;
+      height: 100%;
+      fill: #17bf63;
     }
     .ts-blocked-badge {
       position: absolute;
@@ -330,7 +330,11 @@
     article.style.position = 'relative';
     const badge = document.createElement('div');
     badge.className = 'ts-captured-badge';
-    badge.textContent = 'CAPTURED';
+    badge.innerHTML = `
+      <svg viewBox="0 0 24 24">
+        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+      </svg>
+    `;
     article.appendChild(badge);
   }
 
