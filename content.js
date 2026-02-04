@@ -3,6 +3,16 @@
   let debounceTimer = null;
   let currentProfileHandle = null;
   let floatingBtn = null;
+  let contextInvalidated = false;
+
+  // Helper to safely send messages when extension context may be invalidated
+  function safeSendMessage(message) {
+    if (contextInvalidated || !chrome.runtime?.id) {
+      contextInvalidated = true;
+      return Promise.reject(new Error('Extension context invalidated'));
+    }
+    return chrome.runtime.sendMessage(message);
+  }
 
   // Inject styles for the captured badge and floating button
   const style = document.createElement('style');
@@ -155,7 +165,7 @@
 
     floatingBtn.addEventListener('click', () => {
       // Send message to open popup - this will trigger background to open popup
-      chrome.runtime.sendMessage({ type: 'OPEN_POPUP' }).catch(() => { });
+      safeSendMessage({ type: 'OPEN_POPUP' }).catch(() => { });
     });
 
     // Create block button
@@ -174,7 +184,7 @@
       try {
         if (isCurrentUserBlocked) {
           // Unblock user
-          await chrome.runtime.sendMessage({ type: 'UNBLOCK_USER', handle: currentProfileHandle });
+          await safeSendMessage({ type: 'UNBLOCK_USER', handle: currentProfileHandle });
           isCurrentUserBlocked = false;
           blockBtn.classList.remove('blocked');
           blockBtn.title = 'Block this user from capture';
@@ -185,7 +195,7 @@
           `;
         } else {
           // Block user
-          await chrome.runtime.sendMessage({ type: 'BLOCK_USER', handle: currentProfileHandle });
+          await safeSendMessage({ type: 'BLOCK_USER', handle: currentProfileHandle });
           isCurrentUserBlocked = true;
           blockBtn.classList.add('blocked');
           blockBtn.title = 'Unblock this user';
@@ -233,8 +243,8 @@
     // Get user tweet count and check blocked status
     try {
       const [user, blockedUsers] = await Promise.all([
-        chrome.runtime.sendMessage({ type: 'GET_USER', handle }),
-        chrome.runtime.sendMessage({ type: 'GET_BLOCKED_USERS' })
+        safeSendMessage({ type: 'GET_USER', handle }),
+        safeSendMessage({ type: 'GET_BLOCKED_USERS' })
       ]);
 
       const countBadge = floatingBtn.querySelector('.ts-count-badge');
@@ -321,7 +331,7 @@
     if (!currentProfileHandle || !floatingBtn) return;
 
     try {
-      const user = await chrome.runtime.sendMessage({ type: 'GET_USER', handle: currentProfileHandle });
+      const user = await safeSendMessage({ type: 'GET_USER', handle: currentProfileHandle });
       const countBadge = floatingBtn.querySelector('.ts-count-badge');
       if (countBadge) {
         countBadge.textContent = user?.tweetCount || 0;
@@ -569,7 +579,7 @@
     const now = Date.now();
     if (!homeFeedSettingsCache || now - homeFeedSettingsLastFetch > SETTINGS_CACHE_TTL) {
       try {
-        homeFeedSettingsCache = await chrome.runtime.sendMessage({ type: 'GET_HOME_FEED_SETTINGS' });
+        homeFeedSettingsCache = await safeSendMessage({ type: 'GET_HOME_FEED_SETTINGS' });
         homeFeedSettingsLastFetch = now;
       } catch (e) {
         return null;
@@ -608,7 +618,7 @@
         if (minImpressions > 0 && data.impressionCount < minImpressions) continue;
       }
 
-      chrome.runtime.sendMessage({
+      safeSendMessage({
         type: 'STORE_TWEET',
         tweet: data
       }).then((response) => {

@@ -1,10 +1,3 @@
-console.log('[X-Vault] Background service worker loaded at', new Date().toISOString());
-
-// Open dashboard when extension icon is clicked
-chrome.action.onClicked.addListener(() => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
-});
-
 import {
   storeTweet,
   storeUser,
@@ -31,13 +24,20 @@ import {
   importAllData,
   getRecentTweets,
   getAISettings,
-  setAISettings
+  setAISettings,
   storeBlogPost,
   getBlogPostsByUser,
   getBlogPost,
   updateBlogPost,
   deleteBlogPost
 } from './db.js';
+
+console.log('[X-Vault] Background service worker loaded at', new Date().toISOString());
+
+// Open dashboard when extension icon is clicked
+chrome.action.onClicked.addListener(() => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message).then(sendResponse).catch((err) => {
