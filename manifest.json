@@ -6,13 +6,16 @@
   "permissions": [
     "activeTab",
     "storage",
-    "tabs"
+    "tabs",
+    "alarms",
+    "downloads"
   ],
   "host_permissions": [
     "*://twitter.com/*",
     "*://x.com/*",
     "https://api.openai.com/*",
-    "https://openrouter.ai/*"
+    "https://openrouter.ai/*",
+    "https://generativelanguage.googleapis.com/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -25,6 +28,8 @@
         "*://x.com/*"
       ],
       "js": [
+        "constants.js",
+        "selectors.js",
         "content.js"
       ],
       "run_at": "document_idle"

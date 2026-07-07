@@ -28,6 +28,14 @@
           <span class="nav-icon">🔍</span>
           <span class="nav-label">Search</span>
         </li>
+        <li class="nav-item" data-view="collections">
+          <span class="nav-icon">🏷️</span>
+          <span class="nav-label">Collections</span>
+        </li>
+        <li class="nav-item" data-view="bookmarks">
+          <span class="nav-icon">🔖</span>
+          <span class="nav-label">Bookmarks</span>
+        </li>
         <li class="nav-item" data-view="ai">
           <span class="nav-icon">✨</span>
           <span class="nav-label">AI Replies</span>
@@ -70,9 +78,44 @@
         <div class="section-header">
           <h3>Recent Tweets</h3>
         </div>
-        <section id="recent-tweets">
-          <div class="empty-state">Browse a Twitter/X profile to start capturing tweets.</div>
-        </section>
+        <canvas id="capture-chart" width="600" height="120"
+          style="width:100%;max-height:120px;margin-bottom:16px;"></canvas>
+        <div id="home-main">
+          <section id="recent-tweets">
+            <div class="empty-state">Browse a Twitter/X profile to start capturing tweets.</div>
+          </section>
+
+          <aside id="home-ai-sidebar">
+            <div id="home-ai-panel">
+              <div class="home-ai-header">
+                <h3>AI Replies</h3>
+                <span class="home-ai-subtitle">Compact</span>
+              </div>
+
+              <div id="home-ai-selected" class="home-ai-selected">
+                <div class="home-ai-selected-empty">Click a tweet card to prepare replies.</div>
+              </div>
+
+              <div class="ai-style-row">
+                <label for="home-ai-style-user-input">Which user are you?</label>
+                <div id="home-ai-style-recents" class="ai-style-recents"></div>
+                <input type="text" id="home-ai-style-user-input" list="home-ai-style-user-options"
+                  placeholder="Search @handle..." autocomplete="off">
+                <datalist id="home-ai-style-user-options"></datalist>
+              </div>
+
+              <textarea id="home-ai-prompt-input" rows="3"
+                placeholder="Optional prompt... e.g. 'Keep it direct and short'"></textarea>
+
+              <button id="home-ai-generate-btn" class="ai-generate-btn" data-default-text="Generate Replies"
+                disabled>Generate Replies</button>
+
+              <div id="home-ai-results" class="home-ai-results">
+                <div class="empty-state">Select a tweet to generate replies here.</div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
 
       <!-- USERS VIEW -->
@@ -102,6 +145,17 @@
               <div id="user-context-stats">
                 <span id="ctx-tweet-count"></span>
                 <span id="ctx-date-range"></span>
+              </div>
+              <div id="user-quick-tags-area">
+                <div id="user-quick-tags-header">
+                  <span class="quick-tags-label">Quick Tags</span>
+                  <div id="user-quick-tags-input-wrap">
+                    <input type="text" id="user-quick-tag-input" placeholder="Add tag...">
+                    <button id="user-quick-tag-add" type="button">Add</button>
+                  </div>
+                </div>
+                <div id="user-quick-tags-list"></div>
+                <div id="user-quick-tags-suggestions"></div>
               </div>
               <div id="user-notes-area">
                 <textarea id="user-notes" placeholder="Personal notes about this user..." rows="2"></textarea>
@@ -148,10 +202,56 @@
 
         <div id="search-bar">
           <input type="text" id="search-input" placeholder="Search tweets across all users...">
+          <div class="search-syntax-hint">
+            Operators: <code>from:handle</code> <code>before:YYYY-MM-DD</code> <code>after:YYYY-MM-DD</code>
+            <code>min:likes:N</code> <code>min:views:N</code> <code>has:media</code>
+          </div>
         </div>
 
         <section id="search-results">
           <div class="empty-state">Enter a search term to find tweets.</div>
+        </section>
+      </div>
+
+      <!-- COLLECTIONS VIEW -->
+      <div id="view-collections" class="view">
+        <div class="view-header">
+          <h2>Collections</h2>
+        </div>
+        <div class="collections-layout">
+          <aside id="tag-list">
+            <div class="empty-state">No tags yet. Tag tweets from the Users view.</div>
+          </aside>
+          <section id="collection-tweets">
+            <div class="empty-state">Select a tag to view tweets.</div>
+          </section>
+        </div>
+      </div>
+
+      <!-- BOOKMARKS VIEW -->
+      <div id="view-bookmarks" class="view">
+        <div class="view-header">
+          <h2>Bookmarks</h2>
+          <span id="bookmark-count" class="stat-badge">0 bookmarks</span>
+        </div>
+
+        <div id="bookmark-toolbar">
+          <div class="bookmark-toolbar-left">
+            <button id="sync-bookmarks-btn" class="settings-action-btn">🔄 Sync from X</button>
+            <button id="refresh-bookmarks-btn" class="settings-action-btn">Refresh</button>
+          </div>
+          <div class="bookmark-toolbar-right">
+            <input type="text" id="bookmark-filter" placeholder="Filter bookmarks...">
+            <button id="clear-bookmarks-btn" class="settings-action-btn danger">Clear All</button>
+          </div>
+        </div>
+        <p class="settings-hint" id="bookmark-sync-hint">
+          "Sync from X" opens your bookmarks page and auto-scrolls to capture every bookmark. Keep that
+          tab open until it finishes, then click Refresh.
+        </p>
+
+        <section id="bookmark-list">
+          <div class="empty-state">No bookmarks yet. Click "Sync from X" to grab them.</div>
         </section>
       </div>
 
@@ -173,6 +273,7 @@
             <select id="ai-provider">
               <option value="openai">OpenAI</option>
               <option value="openrouter">OpenRouter</option>
+              <option value="gemini">Gemini</option>
             </select>
           </div>
           <div class="ai-settings-row">
@@ -210,7 +311,16 @@
             <div id="ai-selected-tweets"></div>
 
             <div class="ai-prompt-area">
-              <textarea id="ai-prompt-input" placeholder="Write your custom prompt... e.g. 'Generate witty replies to these tweets' or 'Create thoughtful responses that add value'" rows="3"></textarea>
+              <div class="ai-style-row">
+                <label for="ai-style-user-input">Which user are you?</label>
+                <div id="ai-style-recents" class="ai-style-recents"></div>
+                <input type="text" id="ai-style-user-input" list="ai-style-user-options"
+                  placeholder="Search @handle..." autocomplete="off">
+                <datalist id="ai-style-user-options"></datalist>
+              </div>
+              <textarea id="ai-prompt-input"
+                placeholder="Write your custom prompt... e.g. 'Keep replies short and direct' or 'Reply with a technical tone'"
+                rows="3"></textarea>
               <button id="ai-generate-btn" class="ai-generate-btn">Generate Replies</button>
             </div>
 
@@ -330,6 +440,33 @@
             <button id="export-db-btn" class="settings-action-btn">Export Backup</button>
             <button id="import-db-btn" class="settings-action-btn">Import Backup</button>
           </div>
+          <div class="settings-buttons-row" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e1e8ed;">
+            <button id="delete-all-data-btn" class="settings-action-btn danger"
+              style="background: #e0245e; color: #fff;">⚠ Delete All Data</button>
+          </div>
+        </div>
+
+        <!-- Auto-Backup -->
+        <div class="settings-section">
+          <h3>Auto-Backup</h3>
+          <label class="settings-toggle">
+            <input type="checkbox" id="auto-backup-enabled">
+            <span>Enable automatic backups</span>
+          </label>
+          <div id="auto-backup-options" class="hidden">
+            <div class="threshold-row">
+              <label for="auto-backup-interval">Backup every</label>
+              <select id="auto-backup-interval">
+                <option value="6">6 hours</option>
+                <option value="12">12 hours</option>
+                <option value="24" selected>24 hours</option>
+                <option value="48">48 hours</option>
+              </select>
+            </div>
+            <div class="threshold-row">
+              <span id="auto-backup-last">Last backup: Never</span>
+            </div>
+          </div>
         </div>
 
         <button id="settings-save-btn">Save Settings</button>
@@ -341,6 +478,7 @@
     <span id="toast-msg"></span>
   </div>
 
+  <script src="constants.js"></script>
   <script src="dashboard.js"></script>
 </body>
 

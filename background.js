@@ -7,9 +7,11 @@ import {
   getTweetsByUser,
   searchTweets,
   getTweetCount,
+  getTweetCountByUser,
   getAllTweetsForUser,
   deleteUserAndTweets,
   deleteTweet,
+  deleteAllData,
   blockUser,
   unblockUser,
   getBlockedUsers,
@@ -20,6 +22,10 @@ import {
   setHomeFeedSettings,
   setUserStarred,
   updateUserNotes,
+  addQuickTagToUser,
+  removeQuickTagFromUser,
+  getQuickTagsForUser,
+  getAllQuickUserTags,
   exportAllData,
   importAllData,
   getRecentTweets,
@@ -29,7 +35,20 @@ import {
   getBlogPostsByUser,
   getBlogPost,
   updateBlogPost,
-  deleteBlogPost
+  deleteBlogPost,
+  getAutoBackupSettings,
+  setAutoBackupSettings,
+  addTagToTweet,
+  removeTagFromTweet,
+  getTagsForTweet,
+  getTweetsByTag,
+  getAllTags,
+  getCaptureStats,
+  storeBookmark,
+  getAllBookmarks,
+  getBookmarkCount,
+  deleteBookmark,
+  clearBookmarks
 } from './db.js';
 
 console.log('[X-Vault] Background service worker loaded at', new Date().toISOString());
@@ -38,6 +57,51 @@ console.log('[X-Vault] Background service worker loaded at', new Date().toISOStr
 chrome.action.onClicked.addListener(() => {
   chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
 });
+
+// ==================== Auto-Backup via chrome.alarms ====================
+
+async function setupAutoBackupAlarm() {
+  const settings = await getAutoBackupSettings();
+  if (settings.enabled) {
+    chrome.alarms.create('auto-backup', { periodInMinutes: settings.intervalHours * 60 });
+    console.log(`[X-Vault] Auto-backup alarm set: every ${settings.intervalHours}h`);
+  } else {
+    chrome.alarms.clear('auto-backup');
+  }
+}
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'auto-backup') {
+    console.log('[X-Vault] Auto-backup triggered');
+    try {
+      const data = await exportAllData();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const date = new Date().toISOString().split('T')[0];
+      chrome.downloads.download({
+        url,
+        filename: `x-vault-backup-${date}.json`,
+        saveAs: false
+      }, () => {
+        URL.revokeObjectURL(url);
+      });
+
+      await setAutoBackupSettings({
+        ...(await getAutoBackupSettings()),
+        lastBackupAt: new Date().toISOString()
+      });
+      console.log('[X-Vault] Auto-backup completed');
+    } catch (err) {
+      console.error('[X-Vault] Auto-backup failed:', err);
+    }
+  }
+});
+
+// Initialize alarm on service worker start
+setupAutoBackupAlarm();
+
+// ==================== Message Handler ====================
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message).then(sendResponse).catch((err) => {
@@ -99,6 +163,9 @@ async function handleMessage(message) {
     case 'GET_TWEET_COUNT':
       return await getTweetCount();
 
+    case 'GET_USER_TWEET_COUNT':
+      return await getTweetCountByUser(message.handle);
+
     case 'GET_RECENT_TWEETS':
       return await getRecentTweets({ limit: message.limit || 50 });
 
@@ -157,6 +224,18 @@ async function handleMessage(message) {
     case 'UPDATE_USER_NOTES':
       return await updateUserNotes(message.handle, message.notes);
 
+    case 'ADD_USER_QUICK_TAG':
+      return await addQuickTagToUser(message.handle, message.tag);
+
+    case 'REMOVE_USER_QUICK_TAG':
+      return await removeQuickTagFromUser(message.handle, message.tag);
+
+    case 'GET_USER_QUICK_TAGS':
+      return await getQuickTagsForUser(message.handle);
+
+    case 'GET_ALL_USER_QUICK_TAGS':
+      return await getAllQuickUserTags();
+
     // Blog Posts
     case 'STORE_BLOG_POST':
       return await storeBlogPost(message.post);
@@ -172,6 +251,71 @@ async function handleMessage(message) {
 
     case 'DELETE_BLOG_POST':
       return await deleteBlogPost(message.postId);
+
+    // Tags / Collections
+    case 'TAG_TWEET':
+      return await addTagToTweet(message.tweetId, message.tag);
+
+    case 'UNTAG_TWEET':
+      return await removeTagFromTweet(message.tweetId, message.tag);
+
+    case 'GET_TWEET_TAGS':
+      return await getTagsForTweet(message.tweetId);
+
+    case 'GET_TWEETS_BY_TAG':
+      return await getTweetsByTag(message.tag);
+
+    case 'GET_ALL_TAGS':
+      return await getAllTags();
+
+    // Auto-Backup
+    case 'GET_AUTO_BACKUP_SETTINGS':
+      return await getAutoBackupSettings();
+
+    case 'SET_AUTO_BACKUP_SETTINGS':
+      await setAutoBackupSettings(message.settings);
+      await setupAutoBackupAlarm();
+      return { success: true };
+
+    // Bookmarks
+    case 'STORE_BOOKMARK': {
+      const result = await storeBookmark(message.tweet);
+      if (result.inserted) {
+        const count = await getBookmarkCount();
+        // Notify any open dashboard so its count stays live
+        chrome.runtime.sendMessage({ type: 'BOOKMARK_ADDED', count }).catch(() => { });
+      }
+      return result;
+    }
+
+    case 'GET_BOOKMARKS':
+      return await getAllBookmarks();
+
+    case 'GET_BOOKMARK_COUNT':
+      return await getBookmarkCount();
+
+    case 'DELETE_BOOKMARK':
+      return await deleteBookmark(message.tweetId);
+
+    case 'CLEAR_BOOKMARKS':
+      return await clearBookmarks();
+
+    case 'SYNC_BOOKMARKS': {
+      // Open the X bookmarks page with a marker so the content script
+      // auto-starts the "grab all" scroll capture on load.
+      chrome.tabs.create({ url: 'https://x.com/i/bookmarks#xvault-grab' });
+      return { opened: true };
+    }
+
+    // Analytics
+    case 'GET_CAPTURE_STATS':
+      return await getCaptureStats();
+
+    case 'DELETE_ALL_DATA': {
+      await deleteAllData();
+      chrome.action.setBadgeText({ text: '' });
+      return { deleted: true };
+    }
 
     case 'OPEN_POPUP': {
       // Open the dashboard in a new tab

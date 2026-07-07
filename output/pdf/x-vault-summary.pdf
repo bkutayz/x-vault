@@ -1,0 +1,61 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Length 2374 >>
+stream
+BT /F2 20 Tf 54.00 738.00 Td (X-Vault) Tj ET
+BT /F2 12 Tf 54.00 712.00 Td (What it is) Tj ET
+BT /F1 10 Tf 54.00 696.00 Td (X-Vault is a Chrome extension that passively captures tweets on Twitter/X as you browse. It) Tj ET
+BT /F1 10 Tf 54.00 684.00 Td (stores them locally for search and export to LLMs.) Tj ET
+BT /F2 12 Tf 54.00 666.00 Td (Who it is for) Tj ET
+BT /F1 10 Tf 54.00 650.00 Td (People who want a local, searchable archive of tweets for analysis or LLM prompting while) Tj ET
+BT /F1 10 Tf 54.00 638.00 Td (browsing Twitter/X.) Tj ET
+BT /F2 12 Tf 54.00 620.00 Td (What it does) Tj ET
+BT /F1 10 Tf 54.00 604.00 Td (- Automatically captures tweets on profile pages and individual tweet pages.) Tj ET
+BT /F1 10 Tf 54.00 592.00 Td (- Optionally captures home feed tweets with minimum likes and impressions thresholds.) Tj ET
+BT /F1 10 Tf 54.00 580.00 Td (- Stores tweets locally with per-user counts, notes, and starred users.) Tj ET
+BT /F1 10 Tf 54.00 568.00 Td (- Provides a dashboard with recent tweets, user list, and search across users.) Tj ET
+BT /F1 10 Tf 54.00 556.00 Td (- Sorts a user's tweets by date, likes, or views and supports selection/copy.) Tj ET
+BT /F1 10 Tf 54.00 544.00 Td (- Exports and imports full database backups and copies LLM prompts to clipboard.) Tj ET
+BT /F2 12 Tf 54.00 526.00 Td (How it works) Tj ET
+BT /F1 10 Tf 54.00 510.00 Td (- Content script runs on x.com/twitter.com, scans tweet DOM elements, and extracts text/metrics.) Tj ET
+BT /F1 10 Tf 54.00 498.00 Td (- Tweet data is sent to the background service worker via runtime messages.) Tj ET
+BT /F1 10 Tf 54.00 486.00 Td (- Background uses IndexedDB \(tweets, users, settings, blockedUsers, searchIndex\) and updates) Tj ET
+BT /F1 10 Tf 66.00 474.00 Td (badge counts.) Tj ET
+BT /F1 10 Tf 54.00 462.00 Td (- Dashboard extension page requests data from background and renders UI; export/import uses JSON) Tj ET
+BT /F1 10 Tf 66.00 450.00 Td (downloads.) Tj ET
+BT /F2 12 Tf 54.00 432.00 Td (How to run) Tj ET
+BT /F1 10 Tf 54.00 416.00 Td (- Clone the repo.) Tj ET
+BT /F1 10 Tf 54.00 404.00 Td (- Open chrome://extensions, enable Developer mode, and click Load unpacked.) Tj ET
+BT /F1 10 Tf 54.00 392.00 Td (- Select the repo folder to install the extension.) Tj ET
+BT /F1 10 Tf 54.00 380.00 Td (- Browse x.com or twitter.com and click the extension icon to open the dashboard.) Tj ET
+endstream
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000000321 00000 n 
+0000000396 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2822
+%%EOF

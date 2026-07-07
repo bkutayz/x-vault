@@ -180,22 +180,139 @@ body {
   color: #14171a;
 }
 
+/* Home Layout */
+#home-main {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  overflow: hidden;
+  padding: 0 28px 16px;
+  background: #f5f8fa;
+}
+
 /* Recent Tweets (Masonry Grid) */
 #recent-tweets {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 28px;
-  background: #f5f8fa;
+  padding: 0;
+  background: transparent;
   column-count: 3;
   column-gap: 16px;
 }
 
+#home-ai-sidebar {
+  width: 360px;
+  min-width: 320px;
+  overflow-y: auto;
+}
+
+#home-ai-panel {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border: 1px solid #e1e8ed;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-ai-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #14171a;
+}
+
+.home-ai-subtitle {
+  font-size: 11px;
+  color: #657786;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+.home-ai-selected {
+  border: 1px solid #e1e8ed;
+  border-radius: 10px;
+  background: #f5f8fa;
+  padding: 10px;
+}
+
+.home-ai-selected-empty {
+  font-size: 12px;
+  color: #657786;
+}
+
+.home-ai-selected-handle {
+  font-size: 12px;
+  color: #1DA1F2;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.home-ai-selected-text {
+  font-size: 13px;
+  color: #14171a;
+  line-height: 1.4;
+}
+
+#home-ai-prompt-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e1e8ed;
+  border-radius: 10px;
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  background: #f5f8fa;
+}
+
+#home-ai-prompt-input:focus {
+  border-color: #1DA1F2;
+  background: #fff;
+}
+
+.home-ai-results {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.home-ai-results .empty-state {
+  padding: 16px 8px;
+  font-size: 12px;
+}
+
 @media (max-width: 1200px) {
-  #recent-tweets { column-count: 2; }
+  #home-main {
+    flex-direction: column;
+  }
+
+  #home-ai-sidebar {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  #home-ai-panel {
+    position: static;
+  }
+
+  #recent-tweets {
+    column-count: 2;
+  }
 }
 
 @media (max-width: 800px) {
-  #recent-tweets { column-count: 1; }
+  #recent-tweets {
+    column-count: 1;
+  }
 }
 
 /* Search Results */
@@ -358,6 +475,36 @@ body {
 
 .grid-card-delete:hover {
   color: #e0245e;
+}
+
+.grid-card-home-ai-action {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f3f5;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.grid-card-ai-btn {
+  border: 1px solid #e1e8ed;
+  border-radius: 14px;
+  background: #fff;
+  color: #657786;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.grid-card-ai-btn:hover {
+  border-color: #1DA1F2;
+  color: #1DA1F2;
+  background: #f3f9fd;
+}
+
+.grid-card.home-ai-selected {
+  border-color: #1DA1F2;
+  box-shadow: 0 0 0 1px #1DA1F2;
 }
 
 .empty-state {
@@ -555,6 +702,123 @@ body {
   margin-bottom: 10px;
 }
 
+#user-quick-tags-area {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#user-quick-tags-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.quick-tags-label {
+  font-size: 11px;
+  color: #657786;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+}
+
+#user-quick-tags-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+#user-quick-tag-input {
+  width: 200px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 12px;
+  outline: none;
+}
+
+#user-quick-tag-input:focus {
+  border-color: #1DA1F2;
+}
+
+#user-quick-tag-add {
+  padding: 6px 12px;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+  color: #14171a;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+#user-quick-tag-add:hover {
+  border-color: #1DA1F2;
+  color: #1DA1F2;
+}
+
+#user-quick-tags-list,
+#user-quick-tags-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quick-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #e8f5fd;
+  border: 1px solid #cce8f9;
+  border-radius: 14px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: #0f77b6;
+}
+
+.quick-tag-chip button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #657786;
+  line-height: 1;
+  padding: 0;
+}
+
+.quick-tag-chip button:hover {
+  color: #e0245e;
+}
+
+.quick-tag-suggestion {
+  border: 1px dashed #c3d7e5;
+  background: #fff;
+  color: #4b6d82;
+  border-radius: 14px;
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quick-tag-suggestion:hover {
+  border-color: #1DA1F2;
+  color: #1DA1F2;
+  background: #f3f9fd;
+}
+
+.quick-tags-empty,
+.quick-tags-suggestions-empty {
+  font-size: 12px;
+  color: #8ca0ae;
+}
+
 #user-notes-area textarea {
   width: 100%;
   padding: 10px;
@@ -650,11 +914,15 @@ body {
 }
 
 @media (max-width: 1200px) {
-  #tweet-list { column-count: 2; }
+  #tweet-list {
+    column-count: 2;
+  }
 }
 
 @media (max-width: 800px) {
-  #tweet-list { column-count: 1; }
+  #tweet-list {
+    column-count: 1;
+  }
 }
 
 .retweet-badge {
@@ -1111,6 +1379,7 @@ body {
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
+  flex-wrap: wrap;
 }
 
 .ai-tweet-item-name {
@@ -1125,6 +1394,24 @@ body {
 .ai-tweet-item-handle {
   font-size: 12px;
   color: #657786;
+}
+
+.ai-open-x-link {
+  font-size: 12px;
+  color: #657786;
+  text-decoration: none;
+  line-height: 1;
+  margin-left: 4px;
+}
+
+.ai-open-x-link:hover {
+  color: #1DA1F2;
+}
+
+.ai-tweet-item-date {
+  font-size: 11px;
+  color: #657786;
+  margin-left: auto;
 }
 
 .ai-tweet-item-text {
@@ -1235,6 +1522,17 @@ body {
   color: #e0245e;
 }
 
+.ai-selected-chip-open {
+  text-decoration: none;
+  color: #657786;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.ai-selected-chip-open:hover {
+  color: #1DA1F2;
+}
+
 /* AI Prompt Area */
 .ai-prompt-area {
   padding: 16px;
@@ -1243,6 +1541,70 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.ai-style-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-style-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #657786;
+}
+
+#ai-style-user-input,
+#home-ai-style-user-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e1e8ed;
+  border-radius: 10px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+  background: #f5f8fa;
+}
+
+#ai-style-user-input:focus,
+#home-ai-style-user-input:focus {
+  border-color: #1DA1F2;
+  background: #fff;
+}
+
+.ai-style-recents {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 20px;
+}
+
+.ai-style-recents:empty {
+  display: none;
+}
+
+.ai-style-recents-label {
+  font-size: 11px;
+  color: #657786;
+}
+
+.ai-style-recent-btn {
+  border: 1px solid #d6e7f4;
+  border-radius: 12px;
+  background: #eef7fd;
+  color: #1a6f9f;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.ai-style-recent-btn:hover {
+  border-color: #1DA1F2;
+  color: #1DA1F2;
+  background: #fff;
 }
 
 #ai-prompt-input {
@@ -1305,7 +1667,9 @@ body {
 }
 
 @keyframes ai-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* AI Results */
@@ -1340,6 +1704,15 @@ body {
   color: #1DA1F2;
 }
 
+.ai-result-x-link {
+  color: #1DA1F2;
+  text-decoration: none;
+}
+
+.ai-result-x-link:hover {
+  text-decoration: underline;
+}
+
 .ai-reply-option {
   display: flex;
   align-items: flex-start;
@@ -1372,6 +1745,20 @@ body {
   transition: all 0.15s;
   flex-shrink: 0;
   color: #657786;
+}
+
+.ai-copy-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ai-token-count {
+  font-size: 11px;
+  color: #657786;
+  text-align: right;
 }
 
 .ai-copy-btn:hover {
@@ -1700,4 +2087,317 @@ body {
 .blog-post-btn.danger:hover {
   background: #e0245e;
   color: #fff;
+}
+
+/* ==================== Search Syntax Hint ==================== */
+.search-syntax-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #657786;
+  line-height: 1.6;
+}
+
+.search-syntax-hint code {
+  background: #f5f8fa;
+  border: 1px solid #e1e8ed;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-family: 'SF Mono', 'Menlo', 'Courier New', monospace;
+  color: #1DA1F2;
+}
+
+/* ==================== Media Thumbnails ==================== */
+.grid-media-container {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.grid-media-thumbnail {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #e1e8ed;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.grid-media-thumbnail:hover {
+  opacity: 0.9;
+}
+
+.grid-media-container .grid-media-thumbnail:nth-child(n+2) {
+  width: calc(50% - 3px);
+  max-height: 120px;
+}
+
+/* Link Card */
+.grid-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  background: #f5f8fa;
+  border: 1px solid #e1e8ed;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+  width: 100%;
+}
+
+.grid-link-card:hover {
+  background: #e8f5fd;
+}
+
+.grid-link-card-domain {
+  font-size: 11px;
+  color: #657786;
+  text-transform: lowercase;
+}
+
+.grid-link-card-title {
+  font-size: 13px;
+  color: #14171a;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==================== Thread / Reply Badges ==================== */
+.thread-badge,
+.reply-badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.thread-badge {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.reply-badge {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+/* ==================== Tag Popover ==================== */
+.grid-card-tag-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+
+.grid-card:hover .grid-card-tag-btn {
+  opacity: 1;
+}
+
+.tag-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e1e8ed;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  min-width: 200px;
+}
+
+.tag-popover-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  margin-bottom: 6px;
+}
+
+.tag-popover-input:focus {
+  border-color: #1DA1F2;
+}
+
+.tag-popover-existing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #e8f5fd;
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: #1DA1F2;
+}
+
+.tag-chip button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: #657786;
+  line-height: 1;
+  padding: 0;
+}
+
+.tag-chip button:hover {
+  color: #e0245e;
+}
+
+/* ==================== Collections Layout ==================== */
+.collections-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+#tag-list {
+  width: 220px;
+  min-width: 200px;
+  background: #fff;
+  border-right: 1px solid #e1e8ed;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.tag-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f3f5;
+  transition: background 0.15s;
+}
+
+.tag-item:hover {
+  background: #f5f8fa;
+}
+
+.tag-item.active {
+  background: #e8f5fd;
+  border-left: 3px solid #1DA1F2;
+}
+
+.tag-item-name {
+  font-size: 14px;
+  color: #14171a;
+  font-weight: 500;
+}
+
+#collection-tweets {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 28px;
+  background: #f5f8fa;
+  column-count: 3;
+  column-gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  #collection-tweets {
+    column-count: 2;
+  }
+}
+
+@media (max-width: 800px) {
+  #collection-tweets {
+    column-count: 1;
+  }
+}
+
+/* ==================== Bookmarks View ==================== */
+#bookmark-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 28px;
+  background: #fff;
+  border-bottom: 1px solid #e1e8ed;
+  flex-wrap: wrap;
+}
+
+.bookmark-toolbar-left,
+.bookmark-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#bookmark-filter {
+  padding: 8px 12px;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+#bookmark-filter:focus {
+  outline: none;
+  border-color: #1DA1F2;
+}
+
+#bookmark-sync-hint {
+  padding: 8px 28px 0;
+  margin: 0;
+}
+
+#bookmark-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 28px;
+  background: #f5f8fa;
+  /* Grid (not multi-column): flows row-by-row and scrolls vertically,
+     so large bookmark sets aren't clipped into off-screen columns. */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  align-content: start;
+  gap: 0 16px;
+}
+
+/* ==================== Capture Chart ==================== */
+#capture-chart {
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e1e8ed;
+}
+
+/* Grid-card header needs position relative for tag popover */
+.grid-card-header {
+  position: relative;
+}
+
+/* Threshold row select styling */
+.threshold-row select {
+  padding: 6px 10px;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+}
+
+.threshold-row select:focus {
+  border-color: #1DA1F2;
 }
